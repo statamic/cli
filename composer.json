@@ -1,0 +1,31 @@
+{
+    "name": "statamic/installer",
+    "description": "Statamic installer.",
+    "keywords": [
+        "statamic"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jason Varga",
+            "email": "jason@statamic.com"
+        },
+        {
+            "name": "Jack McDade",
+            "email": "jack@statamic.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Statamic\\Installer\\Console\\": "src/"
+        }
+    },
+    "require": {
+        "guzzlehttp/guzzle": "~4.0|~5.0|~6.0",
+        "symfony/console": "~2.3|~3.0",
+        "symfony/process": "~2.3|~3.0"
+    },
+    "bin": [
+        "statamic"
+    ]
+}
