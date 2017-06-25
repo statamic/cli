@@ -3,6 +3,7 @@
 namespace Statamic\Installer\Console;
 
 use RuntimeException;
+use GuzzleHttp\Client;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,6 +23,11 @@ class NewCommand extends Command
      * @var string
      */
     protected $directory;
+
+    /**
+     * @var string
+     */
+    protected $version;
 
     /**
      * Configure the command options.
@@ -55,6 +61,8 @@ class NewCommand extends Command
             $this->directory = getcwd().'/'.$input->getArgument('name')
         );
 
+        $this->version = $this->getVersion();
+
         $this
             ->download($zipName = $this->makeFilename())
             ->extract($zipName)
@@ -84,5 +92,12 @@ class NewCommand extends Command
     protected function makeFilename()
     {
         return getcwd().'/statamic_'.md5(time().uniqid());
+    }
+
+    protected function getVersion()
+    {
+        return (new Client)
+            ->get('https://outpost.statamic.com/v2/check')
+            ->getBody();
     }
 }

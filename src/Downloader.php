@@ -14,7 +14,6 @@ trait Downloader
      * Download the temporary Zip to the given file.
      *
      * @param  string  $zipFile
-     * @param  string  $version
      * @return $this
      */
     protected function download($zipFile)
@@ -36,9 +35,7 @@ trait Downloader
             }
         ]);
 
-        $request = new Request('GET', 'https://outpost.statamic.com/v2/get/2.5.11');
-
-        $response = $client->send($request);
+        $response = $client->get("https://outpost.statamic.com/v2/get/{$this->version}");
 
         file_put_contents($zipFile, $response->getBody());
 
