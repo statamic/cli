@@ -1,6 +1,6 @@
 <?php
 
-namespace Statamic\Installer\Console;
+namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;

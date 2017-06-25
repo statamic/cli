@@ -1,6 +1,6 @@
 <?php
 
-namespace Statamic\Installer\Console;
+namespace Statamic\Cli;
 
 use RuntimeException;
 use GuzzleHttp\Client;
