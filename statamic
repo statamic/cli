@@ -13,5 +13,6 @@ if (file_exists(__DIR__.'/../../autoload.php')) {
 
 $app = new Symfony\Component\Console\Application('Statamic CLI Tool', '1.0');
 $app->add(new Statamic\Cli\NewCommand);
+$app->add(new Statamic\Cli\VersionCommand);
 
 $app->run();
