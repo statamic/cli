@@ -33,3 +33,15 @@ statamic new my-site
 ```
 
 This will download the latest version and install it into the `my-site` directory.
+
+
+
+## Updating Statamic
+
+From within an existing Statamic project root directory, you may use the following command to update to the latest version.
+
+```
+statamic update
+```
+
+This is just syntactic sugar for the `php please update` command.
