@@ -55,10 +55,12 @@ class NewCommand extends Command
             throw new RuntimeException('The Zip PHP extension is not installed. Please install it and try again.');
         }
 
+        $dir = $input->getArgument('name');
+
         $this->output = $output;
 
         $this->verifyApplicationDoesntExist(
-            $this->directory = getcwd().'/'.$input->getArgument('name')
+            $this->directory = getcwd().'/'.$dir
         );
 
         $this->version = $this->getVersion();
@@ -68,7 +70,7 @@ class NewCommand extends Command
             ->extract($zipName)
             ->cleanup($zipName);
 
-        $this->output->writeln('<info>Done!</info>');
+        $this->output->writeln("<info>[✔] Statamic has been installed into the <comment>{$dir}</comment> directory.</info>");
     }
 
     /**
@@ -96,8 +98,14 @@ class NewCommand extends Command
 
     protected function getVersion()
     {
-        return (new Client)
+        $this->output->write('Checking for the latest version...');
+
+        $version = (new Client)
             ->get('https://outpost.statamic.com/v2/check')
             ->getBody();
+
+        $this->output->writeln(" <info>[✔] $version</info>");
+
+        return $version;
     }
 }
