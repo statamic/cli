@@ -18,6 +18,19 @@ trait Downloader
      */
     protected function download($zipFile)
     {
+        $this->cacheGarbageCollection();
+
+        $zipContents = (file_exists($this->getCachedZipFilename()))
+            ? $this->getCachedZip()
+            : $this->getZipFromServer();
+
+        file_put_contents($zipFile, $zipContents);
+
+        return $this;
+    }
+
+    protected function getZipFromServer()
+    {
         $this->output->writeln('<info>Downloading Statamic. Please wait...</info>');
         $this->output->writeln('Press Ctrl+C to cancel.');
 
@@ -37,11 +50,11 @@ trait Downloader
 
         $response = $client->get("https://outpost.statamic.com/v2/get/{$this->version}");
 
-        file_put_contents($zipFile, $response->getBody());
+        $this->attemptToCacheDownloadedZip($zipContents = $response->getBody());
 
         $this->output->writeln("\n<info>Download complete!</info>");
 
-        return $this;
+        return $zipContents;
     }
 
     protected function createProgressBar($downloadSize)
@@ -70,5 +83,41 @@ trait Downloader
         $pow = min($pow, count($units) - 1);
         $bytes /= pow(1024, $pow);
         return number_format($bytes, 2).' '.$units[$pow];
+    }
+
+    protected function getCachedZip()
+    {
+        $this->output->writeln('<info>Downloaded.</info>');
+
+        return file_get_contents($this->getCachedZipFilename());
+    }
+
+    protected function cacheGarbageCollection()
+    {
+        foreach (glob($this->getCachedDownloadsDirectory().'/*.zip') as $zip) {
+            if ($zip !== $this->getCachedZipFilename()) {
+                unlink($zip);
+            }
+        }
+    }
+
+    protected function attemptToCacheDownloadedZip($zip)
+    {
+        if (! is_dir($dir = $this->getCachedDownloadsDirectory())) {
+            @mkdir($dir, 0755, true);
+            @chown($dir, $_SERVER['SUDO_USER'] ?? $_SERVER['USER']);
+        }
+
+        @file_put_contents($this->getCachedZipFilename(), $zip);
+    }
+
+    protected function getCachedZipFilename()
+    {
+        return sprintf('%s/%s.zip', $this->getCachedDownloadsDirectory(), $this->version);
+    }
+
+    protected function getCachedDownloadsDirectory()
+    {
+        return STATAMIC_HOME_PATH . '/cache';
     }
 }
