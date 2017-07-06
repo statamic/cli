@@ -96,7 +96,7 @@ trait Downloader
 
     protected function getCachedZip()
     {
-        $this->output->writeln('Downloading... <info>[✔] Cached</info>');
+        $this->output->writeln('Downloading... <info>[✔] From cache</info>');
 
         return file_get_contents($this->getCachedZipFilename());
     }
