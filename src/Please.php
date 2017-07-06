@@ -7,6 +7,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Please
 {
+    protected $output;
     protected $cwd;
 
 	public function __construct(OutputInterface $output)
