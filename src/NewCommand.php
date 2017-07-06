@@ -5,6 +5,7 @@ namespace Statamic\Cli;
 use RuntimeException;
 use GuzzleHttp\Client;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -13,6 +14,11 @@ class NewCommand extends Command
 {
     use Downloader;
     use ZipManager;
+
+    /**
+     * @var InputInterface
+     */
+    protected $input;
 
     /**
      * @var OutputInterface
@@ -39,7 +45,8 @@ class NewCommand extends Command
         $this
             ->setName('new')
             ->setDescription('Create a new Statamic application.')
-            ->addArgument('name', InputArgument::REQUIRED);
+            ->addArgument('name', InputArgument::REQUIRED)
+            ->addOption('force-download', null, InputOption::VALUE_NONE, 'Force Statamic to be downloaded, even if a cached version exists.');
     }
 
     /**
@@ -55,9 +62,10 @@ class NewCommand extends Command
             throw new RuntimeException('The Zip PHP extension is not installed. Please install it and try again.');
         }
 
-        $dir = $input->getArgument('name');
-
         $this->output = $output;
+        $this->input = $input;
+
+        $dir = $this->input->getArgument('name');
 
         $this->verifyApplicationDoesntExist(
             $this->directory = getcwd().'/'.$dir

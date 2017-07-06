@@ -20,7 +20,7 @@ trait Downloader
     {
         $this->cacheGarbageCollection();
 
-        $zipContents = (file_exists($this->getCachedZipFilename()))
+        $zipContents = ($this->shouldUseCachedZip())
             ? $this->getCachedZip()
             : $this->getZipFromServer();
 
@@ -29,9 +29,18 @@ trait Downloader
         return $this;
     }
 
+    protected function shouldUseCachedZip()
+    {
+        if ($this->input->getOption('force-download')) {
+            return false;
+        }
+
+        return file_exists($this->getCachedZipFilename());
+    }
+
     protected function getZipFromServer()
     {
-        $this->output->writeln('<info>Downloading Statamic. Please wait...</info>');
+        $this->output->writeln('Downloading...');
         $this->output->writeln('Press Ctrl+C to cancel.');
 
         $client = new Client([
