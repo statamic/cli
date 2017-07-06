@@ -76,7 +76,8 @@ class NewCommand extends Command
         $this
             ->download($zipName = $this->makeFilename())
             ->extract($zipName)
-            ->cleanup($zipName);
+            ->cleanup($zipName)
+            ->applyPermissions();
 
         $this->output->writeln("<info>[✔] Statamic has been installed into the <comment>{$dir}</comment> directory.</info>");
     }
@@ -115,5 +116,26 @@ class NewCommand extends Command
         $this->output->writeln(" <info>[✔] $version</info>");
 
         return $version;
+    }
+
+    /**
+     * Recursively apply permissions to appropriate directories.
+     *
+     * @return void
+     */
+    protected function applyPermissions()
+    {
+        $this->output->write('Updating file permissions...');
+
+        foreach (['local', 'site', 'statamic', 'assets'] as $folder) {
+            $dir = $this->directory . '/' . $folder;
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
+
+            foreach ($iterator as $item) {
+                chmod($item, 0777);
+            }
+        }
+
+        $this->output->writeln(" <info>[✔]</info>");
     }
 }
