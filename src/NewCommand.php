@@ -9,6 +9,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 class NewCommand extends Command
 {
@@ -77,7 +78,8 @@ class NewCommand extends Command
             ->download($zipName = $this->makeFilename())
             ->extract($zipName)
             ->cleanup($zipName)
-            ->applyPermissions();
+            ->applyPermissions()
+            ->createUser();
 
         $this->output->writeln("<info>[✔] Statamic has been installed into the <comment>{$dir}</comment> directory.</info>");
     }
@@ -137,5 +139,29 @@ class NewCommand extends Command
         }
 
         $this->output->writeln(" <info>[✔]</info>");
+
+        return $this;
+    }
+
+    protected function createUser()
+    {
+        $questionText = 'Create a user? (yes/no) [<comment>no</comment>]: ';
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion($questionText, false);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            $this->output->writeln("\x1B[1A\x1B[2K{$questionText}<fg=red>[✘]</>");
+            $this->output->writeln("<comment>[!]</comment> You may create a user with <comment>php please make:user</comment>");
+            return $this;
+        }
+
+        (new Please($this->output))
+            ->cwd($this->directory)
+            ->run('make:user');
+
+        $this->output->writeln("\x1B[1A\x1B[2KUser created <info>[✔]</info>");
+        $this->output->writeln('');
+
+        return $this;
     }
 }
