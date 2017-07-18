@@ -44,4 +44,4 @@ From within an existing Statamic project root directory, you may use the followi
 statamic update
 ```
 
-This is just syntactic sugar for the `php please update` command.
+This is just syntactic sugar for the `php please update` command, available from 2.6 onwards.
