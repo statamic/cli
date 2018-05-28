@@ -13,7 +13,7 @@ if (file_exists(__DIR__.'/../../autoload.php')) {
 
 define('STATAMIC_HOME_PATH', $_SERVER['HOME'].'/.statamic');
 
-$app = new Symfony\Component\Console\Application('Statamic CLI Tool', '1.0');
+$app = new Symfony\Component\Console\Application('Statamic CLI Tool', '1.0.3');
 $app->add(new Statamic\Cli\NewCommand);
 $app->add(new Statamic\Cli\UpdateCommand);
 $app->add(new Statamic\Cli\VersionCommand);
