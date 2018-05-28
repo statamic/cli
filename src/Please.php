@@ -10,10 +10,10 @@ class Please
     protected $output;
     protected $cwd;
 
-	public function __construct(OutputInterface $output)
-	{
-		$this->output = $output;
-	}
+    public function __construct(OutputInterface $output)
+    {
+        $this->output = $output;
+    }
 
     public function cwd($cwd)
     {
@@ -22,8 +22,8 @@ class Please
         return $this;
     }
 
-	public function run($command)
-	{
+    public function run($command)
+    {
         $process = (new Process([PHP_BINARY, 'please', $command]))
             ->setTimeout(null);
 
@@ -40,5 +40,5 @@ class Please
         $process->run(function ($type, $line) {
             $this->output->write($line);
         });
-	}
+    }
 }
