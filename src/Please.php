@@ -2,7 +2,7 @@
 
 namespace Statamic\Cli;
 
-use Symfony\Component\Process\ProcessBuilder;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class Please
@@ -24,11 +24,12 @@ class Please
 
 	public function run($command)
 	{
-        $process = (new ProcessBuilder)
-            ->setTimeout(null)
-            ->setWorkingDirectory($this->cwd)
-            ->setPrefix([PHP_BINARY, 'please', $command])
-            ->getProcess();
+        $process = (new Process([PHP_BINARY, 'please', $command]))
+            ->setTimeout(null);
+
+        if ($this->cwd) {
+            $process->setWorkingDirectory($this->cwd);
+        }
 
         try {
             $process->setTty(true);
