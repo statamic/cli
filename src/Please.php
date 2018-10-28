@@ -32,7 +32,7 @@ class Please
         }
 
         try {
-            $process->setTty(true);
+            $process->setTty(Process::isTtySupported());
         } catch (RuntimeException $e) {
             $this->output->writeln('Warning: '.$e->getMessage());
         }
