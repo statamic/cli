@@ -4,6 +4,7 @@ namespace Statamic\Cli;
 
 use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Process\Exception\RuntimeException;
 
 class Please
 {
@@ -32,9 +33,9 @@ class Please
         }
 
         try {
-            $process->setTty(Process::isTtySupported());
+            $process->setTty(true);
         } catch (RuntimeException $e) {
-            $this->output->writeln('Warning: '.$e->getMessage());
+            // TTY not supported. Move along.
         }
 
         $process->run(function ($type, $line) {
