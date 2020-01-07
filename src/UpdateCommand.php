@@ -25,7 +25,7 @@ class UpdateCommand extends Command
      *
      * @param  InputInterface  $input
      * @param  OutputInterface  $output
-     * @return void
+     * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -34,5 +34,7 @@ class UpdateCommand extends Command
         }
 
         (new Please($output))->run('update');
+
+        return 0;
     }
 }
