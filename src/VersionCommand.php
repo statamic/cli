@@ -25,7 +25,7 @@ class VersionCommand extends Command
      *
      * @param  InputInterface  $input
      * @param  OutputInterface  $output
-     * @return void
+     * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -34,5 +34,7 @@ class VersionCommand extends Command
         }
 
         (new Please($output))->run('version');
+
+        return 0;
     }
 }
