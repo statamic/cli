@@ -103,7 +103,12 @@ class NewCommand extends Command
                 );
             }
 
-            $output->writeln(PHP_EOL.'<comment>Statamic application ready! Build something rad.</comment>');
+            $success = $name
+                ? "Statamic has been successfully installed into the <comment>{$name}</comment> directory."
+                : "Statamic has been successfully installed.";
+
+            $output->writeln(PHP_EOL."<info>[✔] {$success}</info>");
+            $output->writeln("Build something rad!");
         }
 
         return $process->getExitCode();
