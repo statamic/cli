@@ -3,38 +3,20 @@
 namespace Statamic\Cli;
 
 use RuntimeException;
-use GuzzleHttp\Client;
+use Statamic\Cli\Concerns;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Yaml\Yaml;
 
 class NewCommand extends Command
 {
-    use Downloader;
-    use ZipManager;
-
-    /**
-     * @var InputInterface
-     */
-    protected $input;
-
-    /**
-     * @var OutputInterface
-     */
-    protected $output;
-
-    /**
-     * @var string
-     */
-    protected $directory;
-
-    /**
-     * @var string
-     */
-    protected $version;
+    use Concerns\RunsCommands,
+        Concerns\InstallsLegacy;
 
     /**
      * Configure the command options.
@@ -45,45 +27,86 @@ class NewCommand extends Command
     {
         $this
             ->setName('new')
-            ->setDescription('Create a new Statamic application.')
-            ->addArgument('name', InputArgument::REQUIRED)
-            ->addOption('force-download', null, InputOption::VALUE_NONE, 'Force Statamic to be downloaded, even if a cached version exists.');
+            ->setDescription('Create a new Statamic application')
+            ->addArgument('name', InputArgument::OPTIONAL)
+            ->addOption('starter', null, InputOption::VALUE_OPTIONAL, 'Install a specific starter kit', false)
+            ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the dirctory already exists');
     }
 
     /**
      * Execute the command.
      *
-     * @param  InputInterface  $input
-     * @param  OutputInterface  $output
+     * @param  \Symfony\Component\Console\Input\InputInterface  $input
+     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
      * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if (! class_exists('ZipArchive')) {
-            throw new RuntimeException('The Zip PHP extension is not installed. Please install it and try again.');
+        $please = new Please($output);
+
+        if ($please->isV2()) {
+            return $this->installV2($input, $output);
         }
 
-        $this->output = $output;
-        $this->input = $input;
+        $repo = $this->repo($input, $output);
 
-        $dir = $this->input->getArgument('name');
+        $output->write(PHP_EOL.'<fg=red>   _____ __        __                  _
+  / ___// /_____ _/ /_____ _____ ___  (_)____
+  \__ \/ __/ __ `/ __/ __ `/ __ `__ \/ / ___/
+ ___/ / /_/ /_/ / /_/ /_/ / / / / / / / /__
+/____/\__/\__,_/\__/\__,_/_/ /_/ /_/_/\___/</>'.PHP_EOL.PHP_EOL);
 
-        $this->verifyApplicationDoesntExist(
-            $this->directory = getcwd().'/'.$dir
-        );
+        sleep(1);
 
-        $this->version = $this->getVersion();
+        $name = $input->getArgument('name');
 
-        $this
-            ->download($zipName = $this->makeFilename())
-            ->extract($zipName)
-            ->cleanup($zipName)
-            ->applyPermissions()
-            ->createUser();
+        $directory = $name && $name !== '.' ? getcwd().'/'.$name : '.';
 
-        $this->output->writeln("<info>[✔] Statamic has been installed into the <comment>{$dir}</comment> directory.</info>");
+        if (! $input->getOption('force')) {
+            $this->verifyApplicationDoesntExist($directory);
+        }
 
-        return 0;
+        if ($input->getOption('force') && $directory === '.') {
+            throw new RuntimeException('Cannot use --force option when using current directory for installation!');
+        }
+
+        $commands = [
+            $this->createProjectCommand($repo, $directory)
+        ];
+
+        if ($directory != '.' && $input->getOption('force')) {
+            if (PHP_OS_FAMILY == 'Windows') {
+                array_unshift($commands, "rd /s /q \"$directory\"");
+            } else {
+                array_unshift($commands, "rm -rf \"$directory\"");
+            }
+        }
+
+        if (PHP_OS_FAMILY != 'Windows') {
+            $commands[] = "chmod 755 \"$directory/artisan\"";
+            $commands[] = "chmod 755 \"$directory/please\"";
+        }
+
+        if (($process = $this->runCommands($commands, $input, $output))->isSuccessful()) {
+            if ($name && $name !== '.') {
+                $this->replaceInFile(
+                    'APP_URL=http://localhost',
+                    'APP_URL=http://'.$name.'.test',
+                    $directory.'/.env'
+                );
+
+                $this->replaceInFile(
+                    'DB_DATABASE=laravel',
+                    'DB_DATABASE='.str_replace('-', '_', strtolower($name)),
+                    $directory.'/.env'
+                );
+            }
+
+            $output->writeln(PHP_EOL.'<comment>Statamic application ready! Build something rad.</comment>');
+        }
+
+        return $process->getExitCode();
     }
 
     /**
@@ -94,76 +117,102 @@ class NewCommand extends Command
      */
     protected function verifyApplicationDoesntExist($directory)
     {
-        if (is_dir($directory)) {
+        if ((is_dir($directory) || is_file($directory)) && $directory != getcwd()) {
             throw new RuntimeException('Application already exists!');
         }
     }
 
     /**
-     * Generate a random temporary filename.
+     * Get the composer command for the environment.
      *
      * @return string
      */
-    protected function makeFilename()
+    protected function findComposer()
     {
-        return getcwd().'/statamic_'.md5(time().uniqid());
-    }
+        $composerPath = getcwd().'/composer.phar';
 
-    protected function getVersion()
-    {
-        $this->output->write('Checking for the latest version...');
+        if (file_exists($composerPath)) {
+            return '"'.PHP_BINARY.'" '.$composerPath;
+        }
 
-        $version = (new Client)
-            ->get('https://outpost.statamic.com/v2/check')
-            ->getBody();
-
-        $this->output->writeln(" <info>[✔] $version</info>");
-
-        return $version;
+        return 'composer';
     }
 
     /**
-     * Recursively apply permissions to appropriate directories.
+     * Replace the given string in the given file.
      *
-     * @return void
+     * @param  string  $search
+     * @param  string  $replace
+     * @param  string  $file
+     * @return string
      */
-    protected function applyPermissions()
+    protected function replaceInFile(string $search, string $replace, string $file)
     {
-        $this->output->write('Updating file permissions...');
-
-        foreach (['local', 'site', 'statamic', 'assets'] as $folder) {
-            $dir = $this->directory . '/' . $folder;
-            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
-
-            foreach ($iterator as $item) {
-                chmod($item, 0777);
-            }
-        }
-
-        $this->output->writeln(" <info>[✔]</info>");
-
-        return $this;
+        file_put_contents(
+            $file,
+            str_replace($search, $replace, file_get_contents($file))
+        );
     }
 
-    protected function createUser()
+    /**
+     * Determine the starter repo.
+     *
+     * @param  \Symfony\Component\Console\Input\InputInterface  $input
+     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
+     * @return string
+     */
+    protected function repo(InputInterface $input, OutputInterface $output)
     {
-        $questionText = 'Create a user? (yes/no) [<comment>no</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, false);
+        $starter = $input->getOption('starter');
 
-        if (! $helper->ask($this->input, $this->output, $question)) {
-            $this->output->writeln("\x1B[1A\x1B[2K{$questionText}<fg=red>[✘]</>");
-            $this->output->writeln("<comment>[!]</comment> You may create a user with <comment>php please make:user</comment>");
-            return $this;
+        if ($starter === false) {
+            return 'statamic/statamic';
         }
 
-        (new Please($this->output))
-            ->cwd($this->directory)
-            ->run('make:user');
+        $starterKits = YAML::parse(file_get_contents(__DIR__.'/../resources/starter-kits.yaml'));
 
-        $this->output->writeln("\x1B[1A\x1B[2KUser created <info>[✔]</info>");
-        $this->output->writeln('');
+        $official = $starterKits['official'];
+        $thirdParty = $starterKits['third_party'];
 
-        return $this;
+        asort($thirdParty);
+
+        $starterKits = array_merge($official, $thirdParty);
+
+        if ($starter && in_array($starter, $starterKits)) {
+            return $starter;
+        } elseif ($starter) {
+            $output->writeln(PHP_EOL."<error>Could not find starter kit [$starter]</error>");
+        }
+
+        $helper = $this->getHelper('question');
+
+        $question = new ChoiceQuestion('Which starter kit would you like to install from?', $starterKits);
+
+        $output->write(PHP_EOL);
+
+        return $helper->ask($input, new SymfonyStyle($input, $output), $question);
+    }
+
+    /**
+     * Create the composer create-project command.
+     *
+     * @param string $repo
+     * @param string $directory
+     * @return string
+     */
+    protected function createProjectCommand($repo, $directory)
+    {
+        $composer = $this->findComposer();
+
+        $command = $composer." create-project $repo \"$directory\" --remove-vcs --prefer-dist";
+
+        if ($repo !== 'statamic/statamic') {
+            $command .= sprintf(
+                ' --repository="{\"url\": \"%s\", \"type\": \"vcs\"}" --stability="dev"',
+                "https://github.com/$repo"
+            );
+        }
+
+        return $command;
     }
 }

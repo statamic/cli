@@ -30,7 +30,7 @@ class Please
 
     public function isV2()
     {
-        return is_dir($this->cwd().'/statamic');
+        return is_dir($this->cwd().'/statamic') && is_file($this->cwd().'/please');
     }
 
     public function run($command)
