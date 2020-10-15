@@ -1,31 +1,34 @@
 {
     "name": "statamic/cli",
     "description": "Statamic CLI Tool",
-    "keywords": [
-        "statamic"
-    ],
+    "keywords": ["statamic"],
     "license": "MIT",
-    "authors": [
-        {
-            "name": "Jason Varga",
-            "email": "jason@statamic.com"
-        },
-        {
-            "name": "Jack McDade",
-            "email": "jack@statamic.com"
-        }
+    "require": {
+        "php": ">=7.2.5",
+        "guzzlehttp/guzzle": "^6.5.5|^7.0.1",
+        "symfony/console": "^4.0|^5.0",
+        "symfony/process": "^4.2|^5.0",
+        "symfony/yaml": "^4.1 || ^5.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.0"
+    },
+    "bin": [
+        "bin/statamic"
     ],
     "autoload": {
         "psr-4": {
             "Statamic\\Cli\\": "src/"
         }
     },
-    "require": {
-        "guzzlehttp/guzzle": "~4.0|~5.0|~6.0",
-        "symfony/console": "~2.3|~3.0|~4.0|~5.0",
-        "symfony/process": "~2.3|~3.0|~4.0|~5.0"
+    "autoload-dev": {
+        "psr-4": {
+            "Statamic\\Cli\\Tests\\": "tests/"
+        }
     },
-    "bin": [
-        "statamic"
-    ]
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
