@@ -7,7 +7,6 @@
 - [Installing the CLI tool](#installing-the-cli-tool)
 - [Using the CLI tool](#using-the-cli-tool)
     - [Installing Statamic](#installing-statamic)
-    - [Installing Statamic from a Starter Kit](#installing-statamic-from-a-starter-kit)
     - [Checking Statamic versions](#checking-statamic-versions)
     - [Updating Statamic](#updating-statamic)
 
@@ -35,17 +34,7 @@ You may create a new Statamic site with the `new` command:
 statamic new my-site
 ```
 
-This will download the latest version and install it into the `my-site` directory.
-
-### Installing Statamic from a Starter Kit
-
-You may create a new Statamic site from a Starter Kit with the `new` command and the `--starter` option:
-
-```
-statamic new my-site --starter
-```
-
-This will present you with a list of supported starter kits to select from.
+This will present you with a list of supported starter kits to select from.  Upon selection, the latest version will be downloaded and installed into the `my-site` directory.
 
 You may also pass an explicit starter kit repo if you wish to skip the selection prompt:
 
