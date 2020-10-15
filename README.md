@@ -1,6 +1,6 @@
 # Statamic CLI Tool
 
-> Install and manage your **Statamic v3** projects from the command line.
+🌴 Install and manage your **Statamic v3** projects from the command line.
 
 - [Installing the CLI tool](#installing-the-cli-tool)
 - [Using the CLI tool](#using-the-cli-tool)
