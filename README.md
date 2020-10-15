@@ -36,7 +36,7 @@ statamic new my-site --starter
 
 This will present you with a list of supported starter kits to select from.
 
-You may also pass an explicit starter kit repo to skip interactive input:
+You may also pass an explicit starter kit repo if you wish to skip the selection prompt:
 
 ```
 statamic new my-site --starter="statamic/starter-kit-cool-writings"
