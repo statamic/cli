@@ -2,12 +2,15 @@
 
 namespace Statamic\Cli;
 
+use Statamic\Cli\Concerns;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class UpdateCommand extends Command
 {
+    use Concerns\RunsCommands;
+
     /**
      * Configure the command options.
      *
@@ -17,7 +20,7 @@ class UpdateCommand extends Command
     {
         $this
             ->setName('update')
-            ->setDescription('Update the current directory\'s Statamic install to the latest version.');
+            ->setDescription('Update the current directory\'s Statamic install to the latest version');
     }
 
     /**
@@ -29,11 +32,17 @@ class UpdateCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if (! is_dir(getcwd().'/statamic')) {
-            throw new \RuntimeException('This does not appear to be a Statamic project.');
+        $please = new Please($output);
+
+        if ($please->isV2()) {
+            $please->run('update');
+
+            return 0;
         }
 
-        (new Please($output))->run('update');
+        $output->writeln(PHP_EOL.'<comment>NOTE: If you have previously updated using the CP, you may need to update the version in your composer.json before running this update!</comment>'.PHP_EOL);
+
+        $this->runCommands(['composer update statamic/cms --with-dependencies'], $input, $output);
 
         return 0;
     }

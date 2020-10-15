@@ -17,7 +17,7 @@ class VersionCommand extends Command
     {
         $this
             ->setName('version')
-            ->setDescription('Get the version of Statamic installed in the current directory.');
+            ->setDescription('Get the version of Statamic installed in the current directory');
     }
 
     /**
@@ -29,11 +29,13 @@ class VersionCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if (! is_dir(getcwd().'/statamic')) {
-            throw new \RuntimeException('This does not appear to be a Statamic project.');
-        }
+        $please = new Please($output);
 
-        (new Please($output))->run('version');
+        if ($please->isV2()) {
+            $please->run('version');
+        } else {
+            $please->run('--version');
+        }
 
         return 0;
     }
