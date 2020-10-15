@@ -2,7 +2,14 @@
 
 > Install and manage your **Statamic v3** projects from the command line.
 
-## Installing the package
+- [Installing the CLI tool](#installing-the-cli-tool)
+- [Using the CLI tool](#using-the-cli-tool)
+    - [Installing Statamic](#installing-statamic)
+    - [Installing Statamic from a Starter Kit](#installing-statamic-from-a-starter-kit)
+    - [Checking Statamic versions](#checking-statamic-versions)
+    - [Updating Statamic](#updating-statamic)
+
+## Installing the CLI tool
 
 ```
 composer global require statamic/cli
@@ -16,7 +23,9 @@ Make sure to place Composer's system-wide vendor bin directory in your `$PATH` s
 
 Once installed, you should be able to run `statamic {command name}` from within any directory.
 
-## Installing Statamic
+## Using the CLI tool
+
+### Installing Statamic
 
 You may create a new Statamic site with the `new` command:
 
@@ -26,7 +35,7 @@ statamic new my-site
 
 This will download the latest version and install it into the `my-site` directory.
 
-## Installing Statamic from a Starter Kit
+### Installing Statamic from a Starter Kit
 
 You may create a new Statamic site from a Starter Kit with the `new` command and the `--starter` option:
 
@@ -42,7 +51,7 @@ You may also pass an explicit starter kit repo if you wish to skip the selection
 statamic new my-site --starter="statamic/starter-kit-cool-writings"
 ```
 
-## Checking Statamic Versions
+### Checking Statamic versions
 
 From within an existing Statamic project root directory, you may run the following command to quickly find out which version is being used.
 
@@ -50,7 +59,7 @@ From within an existing Statamic project root directory, you may run the followi
 statamic version
 ```
 
-## Updating Statamic
+### Updating Statamic
 
 From within an existing Statamic project root directory, you may use the following command to update to the latest version.
 
