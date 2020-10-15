@@ -45,7 +45,7 @@ class NewCommand extends Command
     {
         $please = new Please($output);
 
-        if ($please->isV2()) {
+        if ($input->getOption('v2')) {
             return $this->installV2($input, $output);
         }
 
