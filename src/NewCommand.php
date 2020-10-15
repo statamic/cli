@@ -165,20 +165,17 @@ class NewCommand extends Command
     {
         $starter = $input->getOption('starter');
 
-        if ($starter === false) {
-            return 'statamic/statamic';
-        }
-
         $starterKits = YAML::parse(file_get_contents(__DIR__.'/../resources/starter-kits.yaml'));
 
+        $blank = ['statamic/statamic'];
         $official = $starterKits['official'];
         $thirdParty = $starterKits['third_party'];
 
         asort($thirdParty);
 
-        $starterKits = array_merge($official, $thirdParty);
+        $repositories = array_merge($blank, $official, $thirdParty);
 
-        if ($starter && in_array($starter, $starterKits)) {
+        if ($starter && in_array($starter, $repositories)) {
             return $starter;
         } elseif ($starter) {
             $output->writeln(PHP_EOL."<error>Could not find starter kit [$starter]</error>");
@@ -186,7 +183,7 @@ class NewCommand extends Command
 
         $helper = $this->getHelper('question');
 
-        $question = new ChoiceQuestion('Which starter kit would you like to install from?', $starterKits);
+        $question = new ChoiceQuestion('Which starter kit would you like to install from? [<comment>statamic/statamic</comment>]', $repositories, 0);
 
         $output->write(PHP_EOL);
 
