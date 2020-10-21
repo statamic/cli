@@ -2,6 +2,5 @@ official:
   - statamic/starter-kit-cool-writings
   - statamic/starter-kit-doogie-browser
   - statamic/starter-kit-starters-creek
-third_party: [
+third_party:
   - jonassiewertsen/statamic-butik-starter-kit
-]
