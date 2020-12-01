@@ -3,4 +3,5 @@ official:
   - statamic/starter-kit-doogie-browser
   - statamic/starter-kit-starters-creek
 third_party:
+  - studio1902/statamic-peak
   - jonassiewertsen/statamic-butik-starter-kit
