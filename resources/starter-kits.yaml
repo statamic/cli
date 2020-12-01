@@ -2,7 +2,6 @@ official:
   - statamic/starter-kit-cool-writings
   - statamic/starter-kit-doogie-browser
   - statamic/starter-kit-starters-creek
-third_party: [
+third_party:
   - doublethreedigital/docs-starter-kit
   - doublethreedigital/sc-starter-kit
-]
