@@ -5,3 +5,5 @@ official:
 third_party:
   - doublethreedigital/docs-starter-kit
   - doublethreedigital/sc-starter-kit
+  - studio1902/statamic-peak
+  - jonassiewertsen/statamic-butik-starter-kit
