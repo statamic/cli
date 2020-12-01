@@ -10,6 +10,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
@@ -49,7 +51,7 @@ class NewCommand extends Command
             return $this->installV2($input, $output);
         }
 
-        $repo = $this->repo($input, $output);
+        $this->testQuestions($input, $output);
 
         $output->write(PHP_EOL.'<fg=red>   _____ __        __                  _
   / ___// /_____ _/ /_____ _____ ___  (_)____
@@ -61,6 +63,7 @@ class NewCommand extends Command
 
         $name = $input->getArgument('name');
 
+        $this->testQuestions($input, $output);
         $directory = $name && $name !== '.' ? getcwd().'/'.$name : '.';
 
         if (! $input->getOption('force')) {
@@ -102,6 +105,8 @@ class NewCommand extends Command
                     $directory.'/.env'
                 );
             }
+
+            $this->testQuestions($input, $output);
 
             $success = $name
                 ? "Statamic has been successfully installed into the <comment>{$name}</comment> directory."
@@ -216,5 +221,29 @@ class NewCommand extends Command
         }
 
         return $command;
+    }
+
+    protected function testQuestions(InputInterface $input, OutputInterface $output)
+    {
+        $helper = $this->getHelper('question');
+
+        $output->write(PHP_EOL);
+
+        $question = new ConfirmationQuestion('Would you like to create a user? [<comment>no</comment>]', false);
+        $createUser = $helper->ask($input, new SymfonyStyle($input, $output), $question);
+
+        if (! $createUser) {
+            $question = new ConfirmationQuestion('Would you like to enable Statamic Pro? [<comment>no</comment>]', false);
+            $enablePro = $helper->ask($input, new SymfonyStyle($input, $output), $question);
+            return;
+        }
+
+        $question = new ConfirmationQuestion('Creating more users later will require Statamic Pro, would you like to enable Pro now? [<comment>no</comment>]', false);
+        $enablePro = $helper->ask($input, new SymfonyStyle($input, $output), $question);
+
+
+
+        var_dump($createUser);
+        die;
     }
 }
