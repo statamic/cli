@@ -28,7 +28,7 @@ class NewCommand extends Command
         $this
             ->setName('new')
             ->setDescription('Create a new Statamic application')
-            ->addArgument('name', InputArgument::OPTIONAL)
+            ->addArgument('name', InputArgument::REQUIRED)
             ->addOption('starter', null, InputOption::VALUE_OPTIONAL, 'Install a specific starter kit', false)
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the dirctory already exists');
