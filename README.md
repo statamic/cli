@@ -24,6 +24,14 @@ Make sure to place Composer's system-wide vendor bin directory in your `$PATH` s
 
 Once installed, you should be able to run `statamic {command name}` from within any directory.
 
+## Updating the CLI tool
+
+```
+composer global update statamic/cli
+```
+
+Run this command to update the CLI tool to the most recent published version.
+
 ## Using the CLI tool
 
 ### Installing Statamic
