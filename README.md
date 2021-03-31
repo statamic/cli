@@ -16,11 +16,7 @@
 composer global require statamic/cli
 ```
 
-Make sure to place Composer's system-wide vendor bin directory in your `$PATH` so the `statamic` executable can be located by your system. This directory exists in different locations based on your operating system; however, some common locations include:
-
-- MacOS: `$HOME/.composer/vendor/bin`
-- Windows: `%USERPROFILE%\AppData\Roaming\Composer\vendor\bin`
-- GNU / Linux Distributions: `$HOME/.config/composer/vendor/bin` or `$HOME/.composer/vendor/bin`
+Make sure to place Composer's system-wide vendor bin directory in your `$PATH` so the `statamic` executable can be located by your system. [Here's how](https://statamic.dev/knowledge-base/adding-to-path).
 
 Once installed, you should be able to run `statamic {command name}` from within any directory.
 
