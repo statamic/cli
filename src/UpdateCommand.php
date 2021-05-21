@@ -13,6 +13,9 @@ class UpdateCommand extends Command
 {
     use Concerns\RunsCommands;
 
+    protected $input;
+    protected $output;
+
     /**
      * Configure the command options.
      *
@@ -34,6 +37,9 @@ class UpdateCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->input = $input;
+        $this->output = $output;
+
         $please = new Please($output);
 
         if ($please->isV2()) {
@@ -44,9 +50,9 @@ class UpdateCommand extends Command
 
         $output->writeln(PHP_EOL.'<comment>NOTE: If you have previously updated using the CP, you may need to update the version in your composer.json before running this update!</comment>'.PHP_EOL);
 
-        $command = $this->updateCommand($input, $output);
+        $command = $this->updateCommand();
 
-        $this->runCommands([$command], $input, $output);
+        $this->runCommand($command);
 
         return 0;
     }
@@ -54,11 +60,9 @@ class UpdateCommand extends Command
     /**
      * Determine the update command.
      *
-     * @param  \Symfony\Component\Console\Input\InputInterface  $input
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
      * @return string
      */
-    protected function updateCommand(InputInterface $input, OutputInterface $output)
+    protected function updateCommand()
     {
         $helper = $this->getHelper('question');
 
@@ -69,7 +73,7 @@ class UpdateCommand extends Command
 
         $question = new ChoiceQuestion('How would you like to update Statamic?', $options, 0);
 
-        $selection = $helper->ask($input, new SymfonyStyle($input, $output), $question);
+        $selection = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
 
         return strpos($selection, 'statamic/cms --with-dependencies')
             ? 'composer update statamic/cms --with-dependencies'
