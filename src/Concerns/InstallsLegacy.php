@@ -3,108 +3,84 @@
 namespace Statamic\Cli\Concerns;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
 use RuntimeException;
 use Statamic\Cli\Please;
 use Symfony\Component\Console\Helper\ProgressBar;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use ZipArchive;
 
 trait InstallsLegacy
 {
-    protected $input;
-    protected $output;
-    protected $directory;
+    protected function installV2()
+    {
+        (new LegacyInstaller($this))->install();
+
+        $this->showSuccessMessage();
+
+        return 0;
+    }
+}
+
+class LegacyInstaller
+{
+    protected $command;
     protected $version;
+    protected $zipFilename;
     protected $progressBar;
 
-    /**
-     * Install Statamic v2.
-     *
-     * @param  InputInterface  $input
-     * @param  OutputInterface  $output
-     * @return int
-     */
-    protected function installV2(InputInterface $input, OutputInterface $output)
+    public function __construct($command)
+    {
+        $this->command = $command;
+    }
+
+    public function install()
+    {
+        $this
+            ->verifyZipExtension()
+            ->getLatestVersion()
+            ->makeZipFilename()
+            ->download()
+            ->extract()
+            ->cleanup()
+            ->applyPermissions()
+            ->createUser();
+    }
+
+    protected function verifyZipExtension()
     {
         if (! class_exists('ZipArchive')) {
             throw new RuntimeException('The Zip PHP extension is not installed. Please install it and try again.');
         }
 
-        $this->output = $output;
-        $this->input = $input;
-
-        $dir = $this->input->getArgument('name');
-
-        $this->verifyApplicationDoesntExist(
-            $this->directory = getcwd().'/'.$dir
-        );
-
-        $this->version = $this->getVersion();
-
-        $this
-            ->download($zipName = $this->makeFilename())
-            ->extract($zipName)
-            ->cleanup($zipName)
-            ->applyPermissions()
-            ->createUser();
-
-        $this->output->writeln("<info>[✔] Statamic has been installed into the <comment>{$dir}</comment> directory.</info>");
-
-        return 0;
+        return $this;
     }
 
-    /**
-     * Verify that the application does not already exist.
-     *
-     * @param  string  $directory
-     * @return void
-     */
-    protected function verifyApplicationDoesntExist($directory)
+    protected function getLatestVersion()
     {
-        if (is_dir($directory)) {
-            throw new RuntimeException('Application already exists!');
-        }
-    }
+        $this->command->output->write('Checking for the latest version...');
 
-    /**
-     * Generate a random temporary filename.
-     *
-     * @return string
-     */
-    protected function makeFilename()
-    {
-        return getcwd().'/statamic_'.md5(time().uniqid());
-    }
-
-    protected function getVersion()
-    {
-        $this->output->write('Checking for the latest version...');
-
-        $version = (new Client)
+        $this->version = (new Client)
             ->get('https://outpost.statamic.com/v2/check')
             ->getBody();
 
-        $this->output->writeln(" <info>[✔] $version</info>");
+        $this->command->output->writeln(" <info>[✔] {$this->version}</info>");
 
-        return $version;
+        return $this;
     }
 
-    /**
-     * Recursively apply permissions to appropriate directories.
-     *
-     * @return void
-     */
+    protected function makeZipFilename()
+    {
+        $this->zipFilename = getcwd().'/statamic_'.md5(time().uniqid());
+
+        return $this;
+    }
+
     protected function applyPermissions()
     {
-        $this->output->write('Updating file permissions...');
+        $this->command->output->write('Updating file permissions...');
 
         foreach (['local', 'site', 'statamic', 'assets'] as $folder) {
-            $dir = $this->directory . '/' . $folder;
+            $dir = $this->command->absolutePath . '/' . $folder;
             $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
 
             foreach ($iterator as $item) {
@@ -112,7 +88,7 @@ trait InstallsLegacy
             }
         }
 
-        $this->output->writeln(" <info>[✔]</info>");
+        $this->command->output->writeln(" <info>[✔]</info>");
 
         return $this;
     }
@@ -120,44 +96,38 @@ trait InstallsLegacy
     protected function createUser()
     {
         $questionText = 'Create a user? (yes/no) [<comment>no</comment>]: ';
-        $helper = $this->getHelper('question');
+        $helper = $this->command->getHelper('question');
         $question = new ConfirmationQuestion($questionText, false);
 
-        if (! $helper->ask($this->input, $this->output, $question)) {
-            $this->output->writeln("\x1B[1A\x1B[2K{$questionText}<fg=red>[✘]</>");
-            $this->output->writeln("<comment>[!]</comment> You may create a user with <comment>php please make:user</comment>");
+        if (! $helper->ask($this->command->input, $this->command->output, $question)) {
+            $this->command->output->writeln("\x1B[1A\x1B[2K{$questionText}<fg=red>[✘]</>");
+            $this->command->output->writeln("<comment>[!]</comment> You may create a user with <comment>php please make:user</comment>");
             return $this;
         }
 
-        (new Please($this->output))
-            ->cwd($this->directory)
+        (new Please($this->command->output))
+            ->cwd($this->command->absolutePath)
             ->run('make:user');
 
-        $this->output->writeln("\x1B[1A\x1B[2KUser created <info>[✔]</info>");
-        $this->output->writeln('');
+        $this->command->output->writeln("\x1B[1A\x1B[2KUser created <info>[✔]</info>");
+        $this->command->output->writeln('');
 
         return $this;
     }
 
-    /**
-     * Download the temporary Zip to the given file.
-     *
-     * @param  string  $zipFile
-     * @return $this
-     */
-    protected function download($zipFile)
+    protected function download()
     {
         $zipContents = $this->getZipFromServer();
 
-        file_put_contents($zipFile, $zipContents);
+        file_put_contents($this->zipFilename, $zipContents);
 
         return $this;
     }
 
     protected function getZipFromServer()
     {
-        $this->output->writeln('Downloading...');
-        $this->output->writeln('Press Ctrl+C to cancel.');
+        $this->command->output->writeln('Downloading...');
+        $this->command->output->writeln('Press Ctrl+C to cancel.');
 
         $client = new Client([
             'progress' => function ($downloadSize, $downloaded) {
@@ -177,7 +147,7 @@ trait InstallsLegacy
 
         $zipContents = $response->getBody();
 
-        $this->output->writeln("\n<info>Download complete!</info>");
+        $this->command->output->writeln("\n<info>Download complete!</info>");
 
         return $zipContents;
     }
@@ -192,7 +162,7 @@ trait InstallsLegacy
             return str_pad($this->formatBytes($bar->getProgress()), 11, ' ', STR_PAD_LEFT);
         });
 
-        $this->progressBar = new ProgressBar($this->output, $downloadSize);
+        $this->progressBar = new ProgressBar($this->command->output, $downloadSize);
         $this->progressBar->setFormat('%current% / %max% %bar% %percent:3s%%');
         $this->progressBar->setRedrawFrequency(max(1, floor($downloadSize / 1000)));
         $this->progressBar->setBarWidth(60);
@@ -207,51 +177,40 @@ trait InstallsLegacy
         $pow = $bytes ? floor(log($bytes, 1024)) : 0;
         $pow = min($pow, count($units) - 1);
         $bytes /= pow(1024, $pow);
+
         return number_format($bytes, 2).' '.$units[$pow];
     }
 
-    /**
-     * Extract the zip file into the given directory.
-     *
-     * @param  string  $zipFile
-     * @return $this
-     */
-    protected function extract($zipFile)
+    protected function extract()
     {
-        $this->output->write('Extracting zip...');
+        $this->command->output->write('Extracting zip...');
 
         $archive = new ZipArchive;
 
-        $archive->open($zipFile);
+        $archive->open($this->zipFilename);
 
-        $archive->extractTo($this->directory.'_tmp');
+        $archive->extractTo($this->command->absolutePath.'_tmp');
 
         $archive->close();
 
-        $this->output->writeln(' <info>[✔]</info>');
+        $this->command->output->writeln(' <info>[✔]</info>');
 
         return $this;
     }
 
-    /**
-     * Clean-up the Zip file.
-     *
-     * @param  string  $zipFile
-     * @return $this
-     */
-    protected function cleanUp($zipFile)
+    protected function cleanUp()
     {
-        $this->output->write('Cleaning up...');
+        $this->command->output->write('Cleaning up...');
 
-        rename($this->directory.'_tmp/statamic', $this->directory);
+        rename($this->command->absolutePath.'_tmp/statamic', $this->command->absolutePath);
 
-        @rmdir($this->directory.'_tmp');
+        @rmdir($this->command->absolutePath.'_tmp');
 
-        @chmod($zipFile, 0777);
+        @chmod($this->zipFilename, 0777);
 
-        @unlink($zipFile);
+        @unlink($this->zipFilename);
 
-        $this->output->writeln(' <info>[✔]</info>');
+        $this->command->output->writeln(' <info>[✔]</info>');
 
         return $this;
     }
