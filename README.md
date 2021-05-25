@@ -39,7 +39,7 @@ This will present you with a list of supported starter kits to select from.  Upo
 You may also pass an explicit starter kit repo if you wish to skip the selection prompt:
 
 ```
-statamic new my-site --starter="statamic/starter-kit-cool-writings"
+statamic new my-site statamic/starter-kit-cool-writings
 ```
 
 ### Checking Statamic versions
