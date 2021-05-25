@@ -46,7 +46,7 @@ class NewCommandIntegrationTest extends TestCase
     {
         $this->assertAppNotExists();
 
-        $statusCode = $this->scaffoldNewApp(['starter-kit' => 'statamic/starter-kit-cool-writingss']);
+        $statusCode = $this->scaffoldNewApp(['starter-kit' => 'statamic/starter-kit-cool-writings']);
 
         $this->assertSame(0, $statusCode);
         $this->assertBasicAppScaffolded();
