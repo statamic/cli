@@ -153,7 +153,7 @@ class NewCommand extends Command
      */
     protected function askForRepo()
     {
-        if ($this->starterKit) {
+        if ($this->starterKit || ! $this->input->isInteractive()) {
             return $this;
         }
 
@@ -170,8 +170,6 @@ class NewCommand extends Command
         $helper = $this->getHelper('question');
 
         $question = new ChoiceQuestion("Which starter kit would you like to install from? [<comment>{$baseRepo}</comment>]", $repositories, 0);
-
-        $this->output->write(PHP_EOL);
 
         $repo = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
 
