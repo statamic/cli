@@ -11,6 +11,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
@@ -72,6 +73,7 @@ class NewCommand extends Command
             ->askForRepo()
             ->installBaseProject()
             ->installStarterKit()
+            ->makeSuperUser()
             ->showSuccessMessage();
 
         return 0;
@@ -239,6 +241,34 @@ class NewCommand extends Command
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem installing Statamic with the chosen starter kit!');
         }
+
+        return $this;
+    }
+
+    /**
+     * Make super user.
+     *
+     * @return $this
+     */
+    protected function makeSuperUser()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $questionText = 'Create a super user? (yes/no) [<comment>no</comment>]: ';
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion($questionText, false);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this;
+        }
+
+        (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('make:user', '--super');
 
         return $this;
     }
