@@ -52,6 +52,21 @@ class NewCommandIntegrationTest extends TestCase
         $this->assertBasicAppScaffolded();
         $this->assertFileExists($this->appPath('content/collections/articles/1994-07-05.magic.md'));
         $this->assertFileExists($this->appPath('resources/blueprints/collections/articles/article.yaml'));
+        $this->assertFileNotExists($this->appPath('starter-kit.yaml'));
+    }
+
+    /** @test */
+    public function it_can_scaffold_with_starter_kit_config()
+    {
+        $this->assertAppNotExists();
+
+        $statusCode = $this->scaffoldNewApp(['starter-kit' => 'statamic/starter-kit-cool-writings', '--with-config' => true]);
+
+        $this->assertSame(0, $statusCode);
+        $this->assertBasicAppScaffolded();
+        $this->assertFileExists($this->appPath('content/collections/articles/1994-07-05.magic.md'));
+        $this->assertFileExists($this->appPath('resources/blueprints/collections/articles/article.yaml'));
+        $this->assertFileExists($this->appPath('starter-kit.yaml'));
     }
 
     /** @test */

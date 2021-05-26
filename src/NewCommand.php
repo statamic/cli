@@ -28,6 +28,7 @@ class NewCommand extends Command
     public $absolutePath;
     public $name;
     public $starterKit;
+    public $withConfig;
     public $force;
     public $v2;
     public $baseInstallSuccessful;
@@ -44,6 +45,7 @@ class NewCommand extends Command
             ->setDescription('Create a new Statamic application')
             ->addArgument('name', InputArgument::REQUIRED, 'Statamic application directory name')
             ->addArgument('starter-kit', InputArgument::OPTIONAL, 'Optionally install specific starter kit')
+            ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for development')
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
@@ -95,6 +97,7 @@ class NewCommand extends Command
         $this->name = pathinfo($this->absolutePath)['basename'];
 
         $this->starterKit = $this->input->getArgument('starter-kit');
+        $this->withConfig = $this->input->getOption('with-config');
 
         $this->force = $this->input->getOption('force');
 
@@ -125,6 +128,10 @@ class NewCommand extends Command
 
         if ($this->starterKit && $this->isInvalidStarterKit()) {
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
+        }
+
+        if (! $this->starterKit && $this->withConfig) {
+            throw new RuntimeException('Starter kit is required when using `--with-config` option!');
         }
 
         return $this;
@@ -232,9 +239,15 @@ class NewCommand extends Command
             return $this;
         }
 
+        $options = ['--no-interaction', '--clear-site'];
+
+        if ($this->withConfig) {
+            $options[] = '--with-config';
+        }
+
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run('starter-kit:install', $this->starterKit, '--no-interaction', '--clear-site');
+            ->run('starter-kit:install', $this->starterKit, ...$options);
 
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem installing Statamic with the chosen starter kit!');
