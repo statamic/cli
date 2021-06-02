@@ -12,11 +12,22 @@ class Please
     protected $cwd;
     protected $v2;
 
+    /**
+     * Instantiate Statamic `please` command wrapper.
+     *
+     * @param OutputInterface $output
+     */
     public function __construct(OutputInterface $output)
     {
         $this->output = $output;
     }
 
+    /**
+     * Get or set current working directory.
+     *
+     * @param mixed $cwd
+     * @return mixed
+     */
     public function cwd($cwd = null)
     {
         if (func_num_args() === 0) {
@@ -28,18 +39,29 @@ class Please
         return $this;
     }
 
+    /**
+     * Check if Statamic instance is v2.
+     *
+     * @return bool
+     */
     public function isV2()
     {
         return is_dir($this->cwd().'/statamic') && is_file($this->cwd().'/please');
     }
 
-    public function run($command)
+    /**
+     * Run please command.
+     *
+     * @param mixed $commandParts
+     * @return int
+     */
+    public function run(...$commandParts)
     {
         if (! is_file($this->cwd().'/please')) {
             throw new \RuntimeException('This does not appear to be a Statamic project.');
         }
 
-        $process = (new Process([PHP_BINARY, 'please', $command]))
+        $process = (new Process(array_merge([PHP_BINARY, 'please'], $commandParts)))
             ->setTimeout(null);
 
         if ($this->cwd) {
@@ -55,5 +77,7 @@ class Please
         $process->run(function ($type, $line) {
             $this->output->write($line);
         });
+
+        return $process->getExitCode();
     }
 }
