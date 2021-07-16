@@ -2,6 +2,7 @@
 
 namespace Statamic\Cli;
 
+use GuzzleHttp\Client;
 use RuntimeException;
 use Statamic\Cli\Concerns;
 use Statamic\Cli\Please;
@@ -12,6 +13,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
@@ -21,6 +23,7 @@ class NewCommand extends Command
         Concerns\InstallsLegacy;
 
     const BASE_REPO = 'statamic/statamic';
+    const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
 
     public $input;
     public $output;
@@ -28,6 +31,7 @@ class NewCommand extends Command
     public $absolutePath;
     public $name;
     public $starterKit;
+    public $starterKitLicense;
     public $withConfig;
     public $force;
     public $v2;
@@ -73,6 +77,7 @@ class NewCommand extends Command
 
         $this
             ->askForRepo()
+            ->validateStarterKitLicense()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
@@ -190,6 +195,71 @@ class NewCommand extends Command
     }
 
     /**
+     * Validate starter kit license.
+     *
+     * @return $this
+     */
+    protected function validateStarterKitLicense()
+    {
+        if (! $this->starterKit) {
+            return $this;
+        }
+
+        $request = new Client;
+
+        try {
+            $response = $request->get(self::OUTPOST_ENDPOINT."{$this->starterKit}");
+        } catch (\Exception $exception) {
+            $this->throwConnectionException();
+        }
+
+        $details = json_decode($response->getBody(), true);
+
+        // If $details === `false`, then no product was returned and we'll consider it a free starter kit.
+        if ($details === false) {
+            return $this;
+        }
+
+        // If the returned product doesn't have a price, then we'll consider it a free starter kit.
+        if (! $details['data']['price']) {
+            return $this;
+        }
+
+        $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
+        $this->output->write("<comment>https://statamic.com/starter-kits/{$this->starterKit}</comment>".PHP_EOL);
+
+        $helper = $this->getHelper('question');
+
+        $question = new Question('Please enter your license key: ');
+        $question->setHidden(true);
+
+        while (! isset($license)) {
+            $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+        }
+
+        try {
+            $response = $request->post(self::OUTPOST_ENDPOINT.'validate/kit', ['json' => [
+                'kit_license' => $license,
+                'package' => $this->starterKit,
+            ]]);
+        } catch (\Exception $exception) {
+            $this->throwConnectionException();
+        }
+
+        $validation = json_decode($response->getBody(), true);
+
+        if (! $validation['data']['valid']) {
+            throw new RuntimeException("Invalid license for [{$this->starterKit}]!");
+        }
+
+        $this->output->write('<info>Starter kit license valid!</info>'.PHP_EOL);
+
+        $this->starterKitLicense = $license;
+
+        return $this;
+    }
+
+    /**
      * Install base project.
      *
      * @return $this
@@ -243,6 +313,11 @@ class NewCommand extends Command
 
         if ($this->withConfig) {
             $options[] = '--with-config';
+        }
+
+        if ($this->starterKitLicense) {
+            $options[] = '--license-key';
+            $options[] = $this->starterKitLicense;
         }
 
         $statusCode = (new Please($this->output))
@@ -408,5 +483,15 @@ class NewCommand extends Command
             $file,
             str_replace($search, $replace, file_get_contents($file))
         );
+    }
+
+    /**
+     * Throw guzzle connection exception.
+     *
+     * @throws RuntimeException
+     */
+    protected function throwConnectionException()
+    {
+        throw new RuntimeException('Cannot connect to [statamic.com] to validate license!');
     }
 }
