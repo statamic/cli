@@ -218,7 +218,7 @@ class NewCommand extends Command
         $details = json_decode($response->getBody(), true);
 
         // If $details === `false`, then no product was returned and we'll consider it a free starter kit.
-        if ($details === false) {
+        if ($details['data'] === false) {
             return $this;
         }
 
