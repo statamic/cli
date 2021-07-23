@@ -49,6 +49,7 @@ class NewCommand extends Command
             ->setDescription('Create a new Statamic application')
             ->addArgument('name', InputArgument::REQUIRED, 'Statamic application directory name')
             ->addArgument('starter-kit', InputArgument::OPTIONAL, 'Optionally install specific starter kit')
+            ->addOption('license', null, InputOption::VALUE_OPTIONAL, 'Optionally provide explicit starter kit license')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for development')
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
@@ -102,6 +103,7 @@ class NewCommand extends Command
         $this->name = pathinfo($this->absolutePath)['basename'];
 
         $this->starterKit = $this->input->getArgument('starter-kit');
+        $this->starterKitLicense = $this->input->getOption('license');
         $this->withConfig = $this->input->getOption('with-config');
 
         $this->force = $this->input->getOption('force');
@@ -228,18 +230,11 @@ class NewCommand extends Command
         $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
         $this->output->write("<comment>https://statamic.com/starter-kits/{$this->starterKit}</comment>".PHP_EOL);
 
-        $helper = $this->getHelper('question');
-
-        $question = new Question('Please enter your license key: ');
-        $question->setHidden(true);
-
-        while (! isset($license)) {
-            $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
-        }
+        $license = $this->getStarterkitLicense();
 
         try {
-            $response = $request->post(self::OUTPOST_ENDPOINT.'validate/kit', ['json' => [
-                'kit_license' => $license,
+            $response = $request->post(self::OUTPOST_ENDPOINT.'validate', ['json' => [
+                'license' => $license,
                 'package' => $this->starterKit,
             ]]);
         } catch (\Exception $exception) {
@@ -493,5 +488,28 @@ class NewCommand extends Command
     protected function throwConnectionException()
     {
         throw new RuntimeException('Cannot connect to [statamic.com] to validate license!');
+    }
+
+    /**
+     * Get starter kit license from parsed options, or ask user for license.
+     *
+     * @return string
+     */
+    protected function getStarterkitLicense()
+    {
+        if ($this->starterKitLicense) {
+            return $this->starterKitLicense;
+        }
+
+        $helper = $this->getHelper('question');
+
+        $question = new Question('Please enter your license key: ');
+        $question->setHidden(true);
+
+        while (! isset($license)) {
+            $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+        }
+
+        return $license;
     }
 }
