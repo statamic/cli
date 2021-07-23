@@ -504,7 +504,6 @@ class NewCommand extends Command
         $helper = $this->getHelper('question');
 
         $question = new Question('Please enter your license key: ');
-        $question->setHidden(true);
 
         while (! isset($license)) {
             $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
