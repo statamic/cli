@@ -311,7 +311,7 @@ class NewCommand extends Command
         }
 
         if ($this->starterKitLicense) {
-            $options[] = '--license-key';
+            $options[] = '--license';
             $options[] = $this->starterKitLicense;
         }
 
