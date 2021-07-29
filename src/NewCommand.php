@@ -32,6 +32,7 @@ class NewCommand extends Command
     public $name;
     public $starterKit;
     public $starterKitLicense;
+    public $local;
     public $withConfig;
     public $force;
     public $v2;
@@ -50,7 +51,8 @@ class NewCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'Statamic application directory name')
             ->addArgument('starter-kit', InputArgument::OPTIONAL, 'Optionally install specific starter kit')
             ->addOption('license', null, InputOption::VALUE_OPTIONAL, 'Optionally provide explicit starter kit license')
-            ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for development')
+            ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
+            ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
@@ -104,6 +106,7 @@ class NewCommand extends Command
 
         $this->starterKit = $this->input->getArgument('starter-kit');
         $this->starterKitLicense = $this->input->getOption('license');
+        $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
 
         $this->force = $this->input->getOption('force');
@@ -135,6 +138,10 @@ class NewCommand extends Command
 
         if ($this->starterKit && $this->isInvalidStarterKit()) {
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
+        }
+
+        if (! $this->starterKit && $this->local) {
+            throw new RuntimeException('Starter kit is required when using `--local` option!');
         }
 
         if (! $this->starterKit && $this->withConfig) {
@@ -305,6 +312,10 @@ class NewCommand extends Command
         }
 
         $options = ['--no-interaction', '--clear-site'];
+
+        if ($this->local) {
+            $options[] = '--local';
+        }
 
         if ($this->withConfig) {
             $options[] = '--with-config';
