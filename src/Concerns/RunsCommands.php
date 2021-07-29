@@ -25,7 +25,7 @@ trait RunsCommands
      */
     protected function runCommands($commands)
     {
-        if ($this->input->getOption('no-ansi')) {
+        if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
                 if (substr($value, 0, 5) === 'chmod') {
                     return $value;
