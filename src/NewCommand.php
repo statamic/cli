@@ -140,6 +140,10 @@ class NewCommand extends Command
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
         }
 
+        if (! $this->starterKit && $this->starterKitLicense) {
+            throw new RuntimeException('Starter kit is required when using `--license` option!');
+        }
+
         if (! $this->starterKit && $this->local) {
             throw new RuntimeException('Starter kit is required when using `--local` option!');
         }
