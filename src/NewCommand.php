@@ -238,8 +238,12 @@ class NewCommand extends Command
             return $this;
         }
 
+        $sellerSlug = $details['data']['seller']['slug'];
+        $kitSlug = $details['data']['slug'];
+        $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
+
         $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
-        $this->output->write("<comment>https://statamic.com/starter-kits/{$this->starterKit}</comment>".PHP_EOL);
+        $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
 
         $license = $this->getStarterkitLicense();
 
