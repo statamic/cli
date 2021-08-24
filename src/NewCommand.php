@@ -15,7 +15,6 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Yaml\Yaml;
 
 class NewCommand extends Command
 {
@@ -182,27 +181,32 @@ class NewCommand extends Command
             return $this;
         }
 
-        $starterKits = YAML::parse(file_get_contents(__DIR__.'/../resources/starter-kits.yaml'));
-
-        $baseRepo = self::BASE_REPO;
-        $official = $starterKits['official'];
-        $thirdParty = $starterKits['third_party'];
-
-        asort($thirdParty);
-
-        $repositories = array_merge([$baseRepo], $official, $thirdParty);
-
         $helper = $this->getHelper('question');
 
-        $question = new ChoiceQuestion("Which starter kit would you like to install from? [<comment>{$baseRepo}</comment>]", $repositories, 0);
+        $options = [
+            'Blank Site',
+            'Starter Kit',
+        ];
 
-        $repo = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+        $question = new ChoiceQuestion("Would you like to start with a blank site or starter kit? [<comment>Blank Site</comment>]", $options, 0);
+
+        $choice = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
 
         $this->output->write(PHP_EOL);
 
-        if ($repo !== $baseRepo) {
-            $this->starterKit = $repo;
+        if ($choice === 'Blank Site') {
+            return $this;
         }
+
+        $question = new Question('Enter the package name of the Starter Kit: ');
+
+        $this->starterKit = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+
+        if ($this->isInvalidStarterKit()) {
+            throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
+        }
+
+        $this->output->write(PHP_EOL);
 
         return $this;
     }
