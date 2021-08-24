@@ -198,6 +198,8 @@ class NewCommand extends Command
             return $this;
         }
 
+        $this->output->write('You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
+
         $question = new Question('Enter the package name of the Starter Kit: ');
 
         $this->starterKit = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
