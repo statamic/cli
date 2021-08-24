@@ -2,23 +2,30 @@
 
 namespace Statamic\Cli\Concerns;
 
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 
 trait RunsCommands
 {
     /**
-     * Run the given commands.
+     * Run the given command.
      *
-     * @param  array  $commands
-     * @param  \Symfony\Component\Console\Input\InputInterface  $input
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
+     * @param string $command
      * @return Process
      */
-    protected function runCommands($commands, InputInterface $input, OutputInterface $output)
+    protected function runCommand($command)
     {
-        if ($input->getOption('no-ansi')) {
+        return $this->runCommands([$command]);
+    }
+
+    /**
+     * Run the given commands.
+     *
+     * @param array $commands
+     * @return Process
+     */
+    protected function runCommands($commands)
+    {
+        if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
                 if (substr($value, 0, 5) === 'chmod') {
                     return $value;
@@ -28,7 +35,7 @@ trait RunsCommands
             }, $commands);
         }
 
-        if ($input->getOption('quiet')) {
+        if ($this->input->getOption('quiet')) {
             $commands = array_map(function ($value) {
                 if (substr($value, 0, 5) === 'chmod') {
                     return $value;
@@ -44,12 +51,12 @@ trait RunsCommands
             try {
                 $process->setTty(true);
             } catch (RuntimeException $e) {
-                $output->writeln('Warning: '.$e->getMessage());
+                $this->output->writeln('Warning: '.$e->getMessage());
             }
         }
 
-        $process->run(function ($type, $line) use ($output) {
-            $output->write('    '.$line);
+        $process->run(function ($type, $line) {
+            $this->output->write('    '.$line);
         });
 
         return $process;

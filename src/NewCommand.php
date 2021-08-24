@@ -2,21 +2,40 @@
 
 namespace Statamic\Cli;
 
+use GuzzleHttp\Client;
 use RuntimeException;
 use Statamic\Cli\Concerns;
+use Statamic\Cli\Please;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Yaml\Yaml;
 
 class NewCommand extends Command
 {
     use Concerns\RunsCommands,
         Concerns\InstallsLegacy;
+
+    const BASE_REPO = 'statamic/statamic';
+    const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
+
+    public $input;
+    public $output;
+    public $relativePath;
+    public $absolutePath;
+    public $name;
+    public $starterKit;
+    public $starterKitLicense;
+    public $local;
+    public $withConfig;
+    public $force;
+    public $v2;
+    public $baseInstallSuccessful;
 
     /**
      * Configure the command options.
@@ -28,103 +47,413 @@ class NewCommand extends Command
         $this
             ->setName('new')
             ->setDescription('Create a new Statamic application')
-            ->addArgument('name', InputArgument::REQUIRED)
-            ->addOption('starter', null, InputOption::VALUE_OPTIONAL, 'Install a specific starter kit', false)
+            ->addArgument('name', InputArgument::REQUIRED, 'Statamic application directory name')
+            ->addArgument('starter-kit', InputArgument::OPTIONAL, 'Optionally install specific starter kit')
+            ->addOption('license', null, InputOption::VALUE_OPTIONAL, 'Optionally provide explicit starter kit license')
+            ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
+            ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
-            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the dirctory already exists');
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
     /**
      * Execute the command.
      *
-     * @param  \Symfony\Component\Console\Input\InputInterface  $input
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
+     * @param \Symfony\Component\Console\Input\InputInterface $input
+     * @param \Symfony\Component\Console\Output\OutputInterface $output
      * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $please = new Please($output);
+        $this->input = $input;
+        $this->output = $output;
 
-        if ($input->getOption('v2')) {
-            return $this->installV2($input, $output);
+        $this
+            ->processArguments()
+            ->validateArguments()
+            ->showStatamicTitleArt();
+
+        if ($this->v2) {
+            return $this->installV2();
         }
 
-        $repo = $this->repo($input, $output);
+        $this
+            ->askForRepo()
+            ->validateStarterKitLicense()
+            ->installBaseProject()
+            ->installStarterKit()
+            ->makeSuperUser()
+            ->showSuccessMessage();
 
-        $output->write(PHP_EOL.'<fg=red>   _____ __        __                  _
+        return 0;
+    }
+
+    /**
+     * Process arguments and options.
+     *
+     * @return $this
+     */
+    protected function processArguments()
+    {
+        $this->relativePath = $this->input->getArgument('name');
+
+        $this->absolutePath = $this->relativePath && $this->relativePath !== '.'
+            ? getcwd().'/'.$this->relativePath
+            : getcwd();
+
+        $this->name = pathinfo($this->absolutePath)['basename'];
+
+        $this->starterKit = $this->input->getArgument('starter-kit');
+        $this->starterKitLicense = $this->input->getOption('license');
+        $this->local = $this->input->getOption('local');
+        $this->withConfig = $this->input->getOption('with-config');
+
+        $this->force = $this->input->getOption('force');
+
+        $this->v2 = $this->input->getOption('v2');
+
+        return $this;
+    }
+
+    /**
+     * Validate arguments and options.
+     *
+     * @return $this
+     * @throws RuntimeException
+     */
+    protected function validateArguments()
+    {
+        if (! $this->force && $this->applicationExists()) {
+            throw new RuntimeException('Application already exists!');
+        }
+
+        if ($this->force && $this->pathIsCwd()) {
+            throw new RuntimeException('Cannot use --force option when using current directory for installation!');
+        }
+
+        if ($this->starterKit && $this->v2) {
+            throw new RuntimeException('Cannot use starter kit with legacy v2 installation!');
+        }
+
+        if ($this->starterKit && $this->isInvalidStarterKit()) {
+            throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
+        }
+
+        if (! $this->starterKit && $this->starterKitLicense) {
+            throw new RuntimeException('Starter kit is required when using `--license` option!');
+        }
+
+        if (! $this->starterKit && $this->local) {
+            throw new RuntimeException('Starter kit is required when using `--local` option!');
+        }
+
+        if (! $this->starterKit && $this->withConfig) {
+            throw new RuntimeException('Starter kit is required when using `--with-config` option!');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Show Statamic title art.
+     *
+     * @return $this
+     */
+    protected function showStatamicTitleArt()
+    {
+        $this->output->write(PHP_EOL.'<fg=red>   _____ __        __                  _
   / ___// /_____ _/ /_____ _____ ___  (_)____
   \__ \/ __/ __ `/ __/ __ `/ __ `__ \/ / ___/
  ___/ / /_/ /_/ / /_/ /_/ / / / / / / / /__
 /____/\__/\__,_/\__/\__,_/_/ /_/ /_/_/\___/</>'.PHP_EOL.PHP_EOL);
 
-        sleep(1);
-
-        $name = $input->getArgument('name');
-
-        $directory = $name && $name !== '.' ? getcwd().'/'.$name : '.';
-
-        if (! $input->getOption('force')) {
-            $this->verifyApplicationDoesntExist($directory);
-        }
-
-        if ($input->getOption('force') && $directory === '.') {
-            throw new RuntimeException('Cannot use --force option when using current directory for installation!');
-        }
-
-        $commands = [
-            $this->createProjectCommand($repo, $directory)
-        ];
-
-        if ($directory != '.' && $input->getOption('force')) {
-            if (PHP_OS_FAMILY == 'Windows') {
-                array_unshift($commands, "rd /s /q \"$directory\"");
-            } else {
-                array_unshift($commands, "rm -rf \"$directory\"");
-            }
-        }
-
-        if (PHP_OS_FAMILY != 'Windows') {
-            $commands[] = "chmod 755 \"$directory/artisan\"";
-            $commands[] = "chmod 755 \"$directory/please\"";
-        }
-
-        if (($process = $this->runCommands($commands, $input, $output))->isSuccessful()) {
-            if ($name && $name !== '.') {
-                $this->replaceInFile(
-                    'APP_URL=http://localhost',
-                    'APP_URL=http://'.$name.'.test',
-                    $directory.'/.env'
-                );
-
-                $this->replaceInFile(
-                    'DB_DATABASE=laravel',
-                    'DB_DATABASE='.str_replace('-', '_', strtolower($name)),
-                    $directory.'/.env'
-                );
-            }
-
-            $success = $name
-                ? "Statamic has been successfully installed into the <comment>{$name}</comment> directory."
-                : "Statamic has been successfully installed.";
-
-            $output->writeln(PHP_EOL."<info>[✔] {$success}</info>");
-            $output->writeln("Build something rad!");
-        }
-
-        return $process->getExitCode();
+        return $this;
     }
 
     /**
-     * Verify that the application does not already exist.
+     * Ask which starter repo to install.
      *
-     * @param  string  $directory
-     * @return void
+     * @return $this
      */
-    protected function verifyApplicationDoesntExist($directory)
+    protected function askForRepo()
     {
-        if ((is_dir($directory) || is_file($directory)) && $directory != getcwd()) {
-            throw new RuntimeException('Application already exists!');
+        if ($this->starterKit || ! $this->input->isInteractive()) {
+            return $this;
         }
+
+        $helper = $this->getHelper('question');
+
+        $options = [
+            'Blank Site',
+            'Starter Kit',
+        ];
+
+        $question = new ChoiceQuestion("Would you like to start with a blank site or starter kit? [<comment>Blank Site</comment>]", $options, 0);
+
+        $choice = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+
+        $this->output->write(PHP_EOL);
+
+        if ($choice === 'Blank Site') {
+            return $this;
+        }
+
+        $this->output->write('You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
+
+        $question = new Question('Enter the package name of the Starter Kit: ');
+
+        $this->starterKit = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+
+        if ($this->isInvalidStarterKit()) {
+            throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
+        }
+
+        $this->output->write(PHP_EOL);
+
+        return $this;
+    }
+
+    /**
+     * Validate starter kit license.
+     *
+     * @return $this
+     */
+    protected function validateStarterKitLicense()
+    {
+        if (! $this->starterKit) {
+            return $this;
+        }
+
+        $request = new Client;
+
+        try {
+            $response = $request->get(self::OUTPOST_ENDPOINT."{$this->starterKit}");
+        } catch (\Exception $exception) {
+            $this->throwConnectionException();
+        }
+
+        $details = json_decode($response->getBody(), true);
+
+        // If $details === `false`, then no product was returned and we'll consider it a free starter kit.
+        if ($details['data'] === false) {
+            return $this;
+        }
+
+        // If the returned product doesn't have a price, then we'll consider it a free starter kit.
+        if (! $details['data']['price']) {
+            return $this;
+        }
+
+        $sellerSlug = $details['data']['seller']['slug'];
+        $kitSlug = $details['data']['slug'];
+        $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
+
+        $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
+        $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
+
+        $license = $this->getStarterkitLicense();
+
+        try {
+            $response = $request->post(self::OUTPOST_ENDPOINT.'validate', ['json' => [
+                'license' => $license,
+                'package' => $this->starterKit,
+            ]]);
+        } catch (\Exception $exception) {
+            $this->throwConnectionException();
+        }
+
+        $validation = json_decode($response->getBody(), true);
+
+        if (! $validation['data']['valid']) {
+            throw new RuntimeException("Invalid license for [{$this->starterKit}]!");
+        }
+
+        $this->output->write('<info>Starter kit license valid!</info>'.PHP_EOL);
+
+        $this->starterKitLicense = $license;
+
+        return $this;
+    }
+
+    /**
+     * Install base project.
+     *
+     * @return $this
+     * @throws RuntimeException
+     */
+    protected function installBaseProject()
+    {
+        $commands = [];
+
+        if ($this->force && ! $this->pathIsCwd()) {
+            if (PHP_OS_FAMILY == 'Windows') {
+                $commands[] = "rd /s /q \"$this->absolutePath\"";
+            } else {
+                $commands[] = "rm -rf \"$this->absolutePath\"";
+            }
+        }
+
+        $commands[] = $this->createProjectCommand();
+
+        if (PHP_OS_FAMILY != 'Windows') {
+            $commands[] = "chmod 755 \"$this->absolutePath/artisan\"";
+            $commands[] = "chmod 755 \"$this->absolutePath/please\"";
+        }
+
+        $this->runCommands($commands);
+
+        if (! $this->wasBaseInstallSuccessful()) {
+            throw new RuntimeException('There was a problem installing Statamic!');
+        }
+
+        $this->updateEnvVars();
+
+        $this->baseInstallSuccessful = true;
+
+        return $this;
+    }
+
+    /**
+     * Install starter kit.
+     *
+     * @return $this
+     * @throws RuntimeException
+     */
+    protected function installStarterKit()
+    {
+        if (! $this->baseInstallSuccessful || ! $this->starterKit) {
+            return $this;
+        }
+
+        $options = ['--no-interaction', '--clear-site'];
+
+        if ($this->local) {
+            $options[] = '--local';
+        }
+
+        if ($this->withConfig) {
+            $options[] = '--with-config';
+        }
+
+        if ($this->starterKitLicense) {
+            $options[] = '--license';
+            $options[] = $this->starterKitLicense;
+        }
+
+        $statusCode = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('starter-kit:install', $this->starterKit, ...$options);
+
+        if ($statusCode !== 0) {
+            throw new RuntimeException('There was a problem installing Statamic with the chosen starter kit!');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Make super user.
+     *
+     * @return $this
+     */
+    protected function makeSuperUser()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $questionText = 'Create a super user? (yes/no) [<comment>no</comment>]: ';
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion($questionText, false);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this;
+        }
+
+        (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('make:user', '--super');
+
+        return $this;
+    }
+
+    /**
+     * Show success message.
+     *
+     * @return $this
+     */
+    protected function showSuccessMessage()
+    {
+        $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
+
+        $this->output->writeln("Build something rad!");
+
+        return $this;
+    }
+
+    /**
+     * Check if the application path already exists.
+     *
+     * @return bool
+     */
+    protected function applicationExists()
+    {
+        if ($this->pathIsCwd()) {
+            return is_file("{$this->absolutePath}/composer.json");
+        }
+
+        return is_dir($this->absolutePath) || is_file($this->absolutePath);
+    }
+
+    /**
+     * Check if the application path is the current working directory.
+     *
+     * @return bool
+     */
+    protected function pathIsCwd()
+    {
+        return $this->absolutePath === getcwd();
+    }
+
+    /**
+     * Check if the starter kit is invalid.
+     *
+     * @return bool
+     */
+    protected function isInvalidStarterKit()
+    {
+        return ! preg_match("/^[^\/\s]+\/[^\/\s]+$/", $this->starterKit);
+    }
+
+    /**
+     * Determine if base install was successful.
+     *
+     * @return bool
+     */
+    protected function wasBaseInstallSuccessful()
+    {
+        return is_file("{$this->absolutePath}/composer.json")
+            && is_dir("{$this->absolutePath}/vendor")
+            && is_file("{$this->absolutePath}/artisan")
+            && is_file("{$this->absolutePath}/please");
+    }
+
+    /**
+     * Create the composer create-project command.
+     *
+     * @return string
+     */
+    protected function createProjectCommand()
+    {
+        $composer = $this->findComposer();
+
+        $baseRepo = self::BASE_REPO;
+
+        $directory = $this->pathIsCwd() ? '.' : $this->relativePath;
+
+        return $composer." create-project {$baseRepo} \"{$directory}\" --remove-vcs --prefer-dist";
     }
 
     /**
@@ -144,12 +473,29 @@ class NewCommand extends Command
     }
 
     /**
+     * Update application env vars.
+     */
+    protected function updateEnvVars()
+    {
+        $this->replaceInFile(
+            'APP_URL=http://localhost',
+            'APP_URL=http://'.$this->name.'.test',
+            $this->absolutePath.'/.env'
+        );
+
+        $this->replaceInFile(
+            'DB_DATABASE=laravel',
+            'DB_DATABASE='.str_replace('-', '_', strtolower($this->name)),
+            $this->absolutePath.'/.env'
+        );
+    }
+
+    /**
      * Replace the given string in the given file.
      *
-     * @param  string  $search
-     * @param  string  $replace
-     * @param  string  $file
-     * @return string
+     * @param string $search
+     * @param string $replace
+     * @param string $file
      */
     protected function replaceInFile(string $search, string $replace, string $file)
     {
@@ -160,61 +506,34 @@ class NewCommand extends Command
     }
 
     /**
-     * Determine the starter repo.
+     * Throw guzzle connection exception.
      *
-     * @param  \Symfony\Component\Console\Input\InputInterface  $input
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
+     * @throws RuntimeException
+     */
+    protected function throwConnectionException()
+    {
+        throw new RuntimeException('Cannot connect to [statamic.com] to validate license!');
+    }
+
+    /**
+     * Get starter kit license from parsed options, or ask user for license.
+     *
      * @return string
      */
-    protected function repo(InputInterface $input, OutputInterface $output)
+    protected function getStarterkitLicense()
     {
-        $starter = $input->getOption('starter');
-
-        $starterKits = YAML::parse(file_get_contents(__DIR__.'/../resources/starter-kits.yaml'));
-
-        $blank = ['statamic/statamic'];
-        $official = $starterKits['official'];
-        $thirdParty = $starterKits['third_party'];
-
-        asort($thirdParty);
-
-        $repositories = array_merge($blank, $official, $thirdParty);
-
-        if ($starter && in_array($starter, $repositories)) {
-            return $starter;
-        } elseif ($starter) {
-            $output->writeln(PHP_EOL."<error>Could not find starter kit [$starter]</error>");
+        if ($this->starterKitLicense) {
+            return $this->starterKitLicense;
         }
 
         $helper = $this->getHelper('question');
 
-        $question = new ChoiceQuestion('Which starter kit would you like to install from? [<comment>statamic/statamic</comment>]', $repositories, 0);
+        $question = new Question('Please enter your license key: ');
 
-        $output->write(PHP_EOL);
-
-        return $helper->ask($input, new SymfonyStyle($input, $output), $question);
-    }
-
-    /**
-     * Create the composer create-project command.
-     *
-     * @param string $repo
-     * @param string $directory
-     * @return string
-     */
-    protected function createProjectCommand($repo, $directory)
-    {
-        $composer = $this->findComposer();
-
-        $command = $composer." create-project $repo \"$directory\" --remove-vcs --prefer-dist";
-
-        if ($repo !== 'statamic/statamic') {
-            $command .= sprintf(
-                ' --repository="{\"url\": \"%s\", \"type\": \"vcs\"}" --stability="dev"',
-                "https://github.com/$repo"
-            );
+        while (! isset($license)) {
+            $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
         }
 
-        return $command;
+        return $license;
     }
 }
