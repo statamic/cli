@@ -21,7 +21,7 @@ if (isset($_SERVER['HOME'])) {
 
 define('STATAMIC_HOME_PATH', $home_path .'/.statamic');
 
-$app = new Symfony\Component\Console\Application('Statamic CLI Tool', '2.0.0'); // TODO: Dynamic version?
+$app = new Symfony\Component\Console\Application('Statamic CLI Tool', Statamic\Cli\Version::get());
 $app->add(new Statamic\Cli\NewCommand);
 $app->add(new Statamic\Cli\UpdateCommand);
 $app->add(new Statamic\Cli\VersionCommand);
