@@ -236,7 +236,7 @@ class NewCommand extends Command
 
         // If $details === `false`, then no product was returned and we'll consider it a free starter kit.
         if ($details['data'] === false) {
-            return $this;
+            return $this->confirmUnlistedKit();
         }
 
         // If the returned product doesn't have a price, then we'll consider it a free starter kit.
@@ -271,6 +271,26 @@ class NewCommand extends Command
         $this->output->write('<info>Starter kit license valid!</info>'.PHP_EOL);
 
         $this->starterKitLicense = $license;
+
+        return $this;
+    }
+
+    /**
+     * Confirm unlisted kit.
+     *
+     * @return $this
+     */
+    protected function confirmUnlistedKit()
+    {
+        $questionText = 'Starter kit not found on Statamic Marketplace! Install unlisted starter kit? (yes/no) [<comment>yes</comment>]: ';
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion($questionText, true);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this->exitInstallation();
+        }
 
         return $this;
     }
@@ -535,5 +555,17 @@ class NewCommand extends Command
         }
 
         return $license;
+    }
+
+    /**
+     * Exit installation.
+     */
+    protected function exitInstallation()
+    {
+        return new class {
+            function __call($method, $args) {
+                return $this;
+            }
+        };
     }
 }
