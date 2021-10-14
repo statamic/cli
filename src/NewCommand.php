@@ -208,8 +208,6 @@ class NewCommand extends Command
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
         }
 
-        $this->output->write(PHP_EOL);
-
         return $this;
     }
 
@@ -236,7 +234,7 @@ class NewCommand extends Command
 
         // If $details === `false`, then no product was returned and we'll consider it a free starter kit.
         if ($details['data'] === false) {
-            return $this;
+            return $this->confirmUnlistedKit();
         }
 
         // If the returned product doesn't have a price, then we'll consider it a free starter kit.
@@ -248,6 +246,7 @@ class NewCommand extends Command
         $kitSlug = $details['data']['slug'];
         $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
 
+        $this->output->write(PHP_EOL);
         $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
         $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
 
@@ -276,6 +275,26 @@ class NewCommand extends Command
     }
 
     /**
+     * Confirm unlisted kit.
+     *
+     * @return $this
+     */
+    protected function confirmUnlistedKit()
+    {
+        $questionText = 'Starter kit not found on Statamic Marketplace! Install unlisted starter kit? (yes/no) [<comment>yes</comment>]: ';
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion($questionText, true);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this->exitInstallation();
+        }
+
+        return $this;
+    }
+
+    /**
      * Install base project.
      *
      * @return $this
@@ -299,6 +318,8 @@ class NewCommand extends Command
             $commands[] = "chmod 755 \"$this->absolutePath/artisan\"";
             $commands[] = "chmod 755 \"$this->absolutePath/please\"";
         }
+
+        $this->output->write(PHP_EOL);
 
         $this->runCommands($commands);
 
@@ -535,5 +556,17 @@ class NewCommand extends Command
         }
 
         return $license;
+    }
+
+    /**
+     * Exit installation.
+     */
+    protected function exitInstallation()
+    {
+        return new class {
+            function __call($method, $args) {
+                return $this;
+            }
+        };
     }
 }
