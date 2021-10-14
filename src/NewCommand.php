@@ -208,8 +208,6 @@ class NewCommand extends Command
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
         }
 
-        $this->output->write(PHP_EOL);
-
         return $this;
     }
 
@@ -248,6 +246,7 @@ class NewCommand extends Command
         $kitSlug = $details['data']['slug'];
         $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
 
+        $this->output->write(PHP_EOL);
         $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
         $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
 
@@ -319,6 +318,8 @@ class NewCommand extends Command
             $commands[] = "chmod 755 \"$this->absolutePath/artisan\"";
             $commands[] = "chmod 755 \"$this->absolutePath/please\"";
         }
+
+        $this->output->write(PHP_EOL);
 
         $this->runCommands($commands);
 
