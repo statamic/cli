@@ -399,6 +399,11 @@ class NewCommand extends Command
 
         $options = ['--no-interaction', '--clear-site'];
 
+        // Temporary option to inform statamic/cms that user is using new CLI Tool installer.
+        // Since this newer version of the CLI tool will also notify the user of older
+        // CLI tool versions going forward, so we can rip this option out later.
+        $options[] = '--cli-install';
+
         if ($this->local) {
             $options[] = '--local';
         }
