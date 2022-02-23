@@ -23,6 +23,7 @@ class NewCommand extends Command
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
+    const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
 
     public $input;
     public $output;
@@ -36,6 +37,7 @@ class NewCommand extends Command
     public $force;
     public $v2;
     public $baseInstallSuccessful;
+    public $shouldUpdateCliToVersion = false;
 
     /**
      * Configure the command options.
@@ -69,6 +71,8 @@ class NewCommand extends Command
         $this->output = $output;
 
         $this
+            ->checkCliVersion()
+            ->notifyIfOldCliVersion()
             ->processArguments()
             ->validateArguments()
             ->showStatamicTitleArt();
@@ -83,9 +87,56 @@ class NewCommand extends Command
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
+            ->notifyIfOldCliVersion()
             ->showSuccessMessage();
 
         return 0;
+    }
+
+    /**
+     * Check cli version.
+     *
+     * @return $this
+     */
+    protected function checkCliVersion()
+    {
+        $request = new Client;
+
+        if (! $currentVersion = Version::get()) {
+            return $this;
+        }
+
+        try {
+            $response = $request->get(self::GITHUB_LATEST_RELEASE_ENDPOINT);
+            $latestVersion = json_decode($response->getBody(), true)['tag_name'];
+        } catch (\Exception $exception) {
+            return $this;
+        }
+
+        if (version_compare($currentVersion, $latestVersion, '<')) {
+            $this->shouldUpdateCliToVersion = $latestVersion;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Notify user if a statamic/cli upgrade exists.
+     *
+     * @return $this
+     */
+    protected function notifyIfOldCliVersion()
+    {
+        if (! $this->shouldUpdateCliToVersion) {
+            return $this;
+        }
+
+        $this->output->write(PHP_EOL);
+        $this->output->write("<error>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</error>".PHP_EOL);
+        $this->output->write("<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>".PHP_EOL);
+        $this->output->write("<comment>composer global update statamic/cli</comment>".PHP_EOL);
+
+        return $this;
     }
 
     /**
@@ -564,7 +615,8 @@ class NewCommand extends Command
     protected function exitInstallation()
     {
         return new class {
-            function __call($method, $args) {
+            public function __call($method, $args)
+            {
                 return $this;
             }
         };
