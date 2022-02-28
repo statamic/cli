@@ -301,7 +301,7 @@ class NewCommand extends Command
         $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
         $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
 
-        $license = $this->getStarterkitLicense();
+        $license = $this->getStarterKitLicense();
 
         try {
             $response = $request->post(self::OUTPOST_ENDPOINT.'validate', ['json' => [
@@ -322,7 +322,7 @@ class NewCommand extends Command
 
         $this->starterKitLicense = $license;
 
-        return $this;
+        return $this->confirmSingleSiteLicense();
     }
 
     /**
@@ -335,6 +335,32 @@ class NewCommand extends Command
         $questionText = 'Starter kit not found on Statamic Marketplace! Install unlisted starter kit? (yes/no) [<comment>yes</comment>]: ';
         $helper = $this->getHelper('question');
         $question = new ConfirmationQuestion($questionText, true);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this->exitInstallation();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Confirm single-site license.
+     *
+     * @return $this
+     */
+    protected function confirmSingleSiteLicense()
+    {
+        $this->output->write(PHP_EOL);
+        $this->output->write('<comment>Once successfully installed, this single-site license will be marked as used</comment>'.PHP_EOL);
+        $this->output->write('<comment>cannot be installed on future Statamic sites. Would you like to continue installation?</comment>');
+
+        $helper = $this->getHelper('question');
+
+        $questionText = 'I am aware this is a single-site license (yes/no) [<comment>no</comment>]: ';
+
+        $question = new ConfirmationQuestion($questionText, false);
 
         $this->output->write(PHP_EOL);
 
@@ -597,7 +623,7 @@ class NewCommand extends Command
      *
      * @return string
      */
-    protected function getStarterkitLicense()
+    protected function getStarterKitLicense()
     {
         if ($this->starterKitLicense) {
             return $this->starterKitLicense;
