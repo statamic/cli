@@ -112,7 +112,7 @@ class NewCommand extends Command
         try {
             $response = $request->get(self::GITHUB_LATEST_RELEASE_ENDPOINT);
             $latestVersion = json_decode($response->getBody(), true)['tag_name'];
-        } catch (\Exception $exception) {
+        } catch (\Throwable $exception) {
             return $this;
         }
 
