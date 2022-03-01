@@ -135,7 +135,7 @@ class NewCommand extends Command
         }
 
         $this->output->write(PHP_EOL);
-        $this->output->write("<error>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</error>".PHP_EOL);
+        $this->output->write("<comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
         $this->output->write("<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>".PHP_EOL);
         $this->output->write("<comment>composer global update statamic/cli</comment>".PHP_EOL);
 
