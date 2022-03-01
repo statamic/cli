@@ -348,9 +348,11 @@ class NewCommand extends Command
         $kitSlug = $details['data']['slug'];
         $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
 
-        $this->output->write(PHP_EOL);
-        $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
-        $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
+        if ($this->input->isInteractive()) {
+            $this->output->write(PHP_EOL);
+            $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
+            $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
+        }
 
         $license = $this->getStarterKitLicense();
 
@@ -403,9 +405,15 @@ class NewCommand extends Command
      */
     protected function confirmSingleSiteLicense()
     {
+        $appendedContinueText = $this->input->isInteractive() ? ' Would you like to continue installation?' : PHP_EOL;
+
         $this->output->write(PHP_EOL);
         $this->output->write('<comment>Once successfully installed, this single-site license will be marked as used</comment>'.PHP_EOL);
-        $this->output->write('<comment>cannot be installed on future Statamic sites. Would you like to continue installation?</comment>');
+        $this->output->write("<comment>and cannot be installed on future Statamic sites!{$appendedContinueText}</comment>");
+
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
 
         $helper = $this->getHelper('question');
 
@@ -678,6 +686,10 @@ class NewCommand extends Command
     {
         if ($this->starterKitLicense) {
             return $this->starterKitLicense;
+        }
+
+        if (! $this->input->isInteractive()) {
+            throw new RuntimeException('A starter kit license is required, please pass using the `--license` option!');
         }
 
         $helper = $this->getHelper('question');
