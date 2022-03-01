@@ -31,6 +31,7 @@ class NewCommand extends Command
     public $absolutePath;
     public $name;
     public $starterKit;
+    public $starterKitVcs;
     public $starterKitLicense;
     public $local;
     public $withConfig;
@@ -224,7 +225,7 @@ class NewCommand extends Command
     }
 
     /**
-     * Ask which starter repo to install.
+     * Ask which starter kit repo to install.
      *
      * @return $this
      */
@@ -707,6 +708,8 @@ class NewCommand extends Command
 
     /**
      * Exit installation.
+     *
+     * @return \stdClass
      */
     protected function exitInstallation()
     {
