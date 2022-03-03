@@ -51,6 +51,7 @@ class NewCommand extends Command
             ->setName('new')
             ->setDescription('Create a new Statamic application')
             ->addArgument('name', InputArgument::REQUIRED, 'Statamic application directory name')
+            ->addOption('dev', null, InputOption::VALUE_NONE, 'Installs the latest "development" release')
             ->addArgument('starter-kit', InputArgument::OPTIONAL, 'Optionally install specific starter kit')
             ->addOption('license', null, InputOption::VALUE_OPTIONAL, 'Optionally provide explicit starter kit license')
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
@@ -709,9 +710,11 @@ class NewCommand extends Command
 
         $baseRepo = self::BASE_REPO;
 
+        $version = $this->getVersion();
+
         $directory = $this->pathIsCwd() ? '.' : $this->relativePath;
 
-        return $composer." create-project {$baseRepo} \"{$directory}\" --remove-vcs --prefer-dist";
+        return $composer." create-project {$baseRepo} \"{$directory}\" {$version} --remove-vcs --prefer-dist";
     }
 
     /**
@@ -827,5 +830,14 @@ class NewCommand extends Command
                 return $this;
             }
         };
+    }
+
+    protected function getVersion()
+    {
+        if ($this->input->getOption('dev')) {
+            return 'dev-master';
+        }
+
+        return '';
     }
 }
