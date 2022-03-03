@@ -58,10 +58,12 @@ trait RunsCommands
         }
 
         if ($disableOutput) {
-            $process->disableOutput();
+            $process->disableOutput()->run();
+        } else {
+            $process->run(function ($type, $line) {
+                $this->output->write($line);
+            });
         }
-
-        $process->run();
 
         return $process;
     }
