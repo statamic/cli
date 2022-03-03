@@ -534,11 +534,107 @@ class NewCommand extends Command
             return $this;
         }
 
+        // Since Windows cannot TTY, we'll capture their input here and make a user.
+        if (PHP_OS_FAMILY === 'Windows') {
+            return $this->makeSuperUserInWindows();
+        }
+
+        // Otherwise, delegate to the `make:user` command with interactivity and let core handle the finer details.
         (new Please($this->output))
             ->cwd($this->absolutePath)
             ->run('make:user', '--super');
 
         return $this;
+    }
+
+    /**
+     * Make super user in Windows.
+     *
+     * @return $this
+     */
+    protected function makeSuperUserInWindows()
+    {
+        $please = (new Please($this->output))->cwd($this->absolutePath);
+
+        // Ask for email
+        while (! isset($email) || ! $this->validateEmail($email)) {
+            $email = $this->askForBasicInput('Email');
+        }
+
+        // Ask for name
+        $name = $this->askForBasicInput('Name');
+
+        // Ask for password
+        while (! isset($password) || ! $this->validatePassword($password)) {
+            $password = $this->askForBasicInput('Password (Your input will be hidden)', true);
+        }
+
+        // Create super user and update with captured input.
+        $please->run('make:user', '--super', $email);
+
+        $updateUser = '\Statamic\Facades\User::findByEmail('.escapeshellarg($email).')'
+            . '->password('.escapeshellarg($password).')'
+            . '->makeSuper()';
+
+        if ($name) {
+            $updateUser .= '->set("name", '.escapeshellarg($name).')';
+        }
+
+        $updateUser .= '->save();';
+
+        $please->run('tinker', '--execute', $updateUser);
+
+        return $this;
+    }
+
+    /**
+     * Ask for basic input.
+     *
+     * @param string $label
+     * @param bool $hiddenInput
+     * @return mixed
+     */
+    protected function askForBasicInput($label, $hiddenInput = false)
+    {
+        return $this->getHelper('question')->ask(
+            $this->input,
+            new SymfonyStyle($this->input, $this->output),
+            (new Question("{$label}: "))->setHidden($hiddenInput)
+        );
+    }
+
+    /**
+     * Validate email address.
+     *
+     * @param string $email
+     * @return bool
+     */
+    protected function validateEmail($email)
+    {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return true;
+        }
+
+        $this->output->write("<error>Invalid email address.</error>".PHP_EOL);
+
+        return false;
+    }
+
+    /**
+     * Validate password.
+     *
+     * @param string $password
+     * @return bool
+     */
+    protected function validatePassword($password)
+    {
+        if (strlen($password) >= 8) {
+            return true;
+        }
+
+        $this->output->write("<error>The input must be at least 8 characters.</error>".PHP_EOL);
+
+        return false;
     }
 
     /**
