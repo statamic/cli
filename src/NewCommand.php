@@ -23,6 +23,7 @@ class NewCommand extends Command
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
+    const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
 
     public $input;
     public $output;
@@ -30,12 +31,14 @@ class NewCommand extends Command
     public $absolutePath;
     public $name;
     public $starterKit;
+    public $starterKitVcs;
     public $starterKitLicense;
     public $local;
     public $withConfig;
     public $force;
     public $v2;
     public $baseInstallSuccessful;
+    public $shouldUpdateCliToVersion = false;
 
     /**
      * Configure the command options.
@@ -69,6 +72,8 @@ class NewCommand extends Command
         $this->output = $output;
 
         $this
+            ->checkCliVersion()
+            ->notifyIfOldCliVersion()
             ->processArguments()
             ->validateArguments()
             ->showStatamicTitleArt();
@@ -79,13 +84,62 @@ class NewCommand extends Command
 
         $this
             ->askForRepo()
+            ->detectRepoVcs()
+            ->detectMissingVcsAuth()
             ->validateStarterKitLicense()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
+            ->notifyIfOldCliVersion()
             ->showSuccessMessage();
 
         return 0;
+    }
+
+    /**
+     * Check cli version.
+     *
+     * @return $this
+     */
+    protected function checkCliVersion()
+    {
+        $request = new Client;
+
+        if (! $currentVersion = Version::get()) {
+            return $this;
+        }
+
+        try {
+            $response = $request->get(self::GITHUB_LATEST_RELEASE_ENDPOINT);
+            $latestVersion = json_decode($response->getBody(), true)['tag_name'];
+        } catch (\Throwable $exception) {
+            return $this;
+        }
+
+        if (version_compare($currentVersion, $latestVersion, '<')) {
+            $this->shouldUpdateCliToVersion = $latestVersion;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Notify user if a statamic/cli upgrade exists.
+     *
+     * @return $this
+     */
+    protected function notifyIfOldCliVersion()
+    {
+        if (! $this->shouldUpdateCliToVersion) {
+            return $this;
+        }
+
+        $this->output->write(PHP_EOL);
+        $this->output->write("<comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
+        $this->output->write("<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>".PHP_EOL);
+        $this->output->write("<comment>composer global update statamic/cli</comment>".PHP_EOL);
+
+        return $this;
     }
 
     /**
@@ -171,7 +225,7 @@ class NewCommand extends Command
     }
 
     /**
-     * Ask which starter repo to install.
+     * Ask which starter kit repo to install.
      *
      * @return $this
      */
@@ -212,6 +266,54 @@ class NewCommand extends Command
     }
 
     /**
+     * Detect starter kit repo vcs, using same precedence logic used in statamic/cms.
+     *
+     * @return $this
+     */
+    protected function detectRepoVcs()
+    {
+        if ($this->local) {
+            return $this;
+        }
+
+        $request = new Client(['http_errors' => false]);
+
+        if ($request->get("https://repo.packagist.org/p2/{$this->starterKit}.json")->getStatusCode() === 200) {
+            return $this;
+        }
+
+        if ($request->get("https://github.com/{$this->starterKit}")->getStatusCode() === 200) {
+            $this->starterKitVcs = 'github';
+        } elseif ($request->get($bitbucketUrl = "https://bitbucket.org/{$this->starterKit}.git")->getStatusCode() === 200) {
+            $this->starterKitVcs = 'bitbucket';
+        } elseif ($request->get($gitlabUrl = "https://gitlab.com/{$this->starterKit}")->getStatusCode() === 200) {
+            $this->starterKitVcs = 'gitlab';
+        }
+
+        return $this;
+    }
+
+    /**
+     * Detect missing starter kit repo vcs auth, and prompt user to properly authenticate.
+     *
+     * @return $this
+     */
+    protected function detectMissingVcsAuth()
+    {
+        if ($this->starterKitVcs === 'github' && $this->hasMissingComposerToken('github-oauth.github.com')) {
+            $this->output->write(PHP_EOL);
+            $this->output->write('<error>Composer could not authenticate with GitHub!</error>'.PHP_EOL);
+            $this->output->write('<comment>Please generate a personal access token at: https://github.com/settings/tokens/new</comment>'.PHP_EOL);
+            $this->output->write('<comment>Then save your token for future use by running the following command:</comment>'.PHP_EOL);
+            $this->output->write('<comment>composer config --global --auth github-oauth.github.com [your-token-here]</comment>'.PHP_EOL);
+
+            return $this->exitInstallation();
+        }
+
+        return $this;
+    }
+
+    /**
      * Validate starter kit license.
      *
      * @return $this
@@ -246,11 +348,13 @@ class NewCommand extends Command
         $kitSlug = $details['data']['slug'];
         $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
 
-        $this->output->write(PHP_EOL);
-        $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
-        $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
+        if ($this->input->isInteractive()) {
+            $this->output->write(PHP_EOL);
+            $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
+            $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
+        }
 
-        $license = $this->getStarterkitLicense();
+        $license = $this->getStarterKitLicense();
 
         try {
             $response = $request->post(self::OUTPOST_ENDPOINT.'validate', ['json' => [
@@ -271,7 +375,7 @@ class NewCommand extends Command
 
         $this->starterKitLicense = $license;
 
-        return $this;
+        return $this->confirmSingleSiteLicense();
     }
 
     /**
@@ -284,6 +388,38 @@ class NewCommand extends Command
         $questionText = 'Starter kit not found on Statamic Marketplace! Install unlisted starter kit? (yes/no) [<comment>yes</comment>]: ';
         $helper = $this->getHelper('question');
         $question = new ConfirmationQuestion($questionText, true);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this->exitInstallation();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Confirm single-site license.
+     *
+     * @return $this
+     */
+    protected function confirmSingleSiteLicense()
+    {
+        $appendedContinueText = $this->input->isInteractive() ? ' Would you like to continue installation?' : PHP_EOL;
+
+        $this->output->write(PHP_EOL);
+        $this->output->write('<comment>Once successfully installed, this single-site license will be marked as used</comment>'.PHP_EOL);
+        $this->output->write("<comment>and cannot be installed on future Statamic sites!{$appendedContinueText}</comment>");
+
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $helper = $this->getHelper('question');
+
+        $questionText = 'I am aware this is a single-site license (yes/no) [<comment>no</comment>]: ';
+
+        $question = new ConfirmationQuestion($questionText, false);
 
         $this->output->write(PHP_EOL);
 
@@ -347,6 +483,11 @@ class NewCommand extends Command
         }
 
         $options = ['--no-interaction', '--clear-site'];
+
+        // Temporary option to inform statamic/cms that user is using new CLI Tool installer.
+        // Since this newer version of the CLI tool will also notify the user of older
+        // CLI tool versions going forward, so we can rip this option out later.
+        $options[] = '--cli-install';
 
         if ($this->local) {
             $options[] = '--local';
@@ -637,10 +778,14 @@ class NewCommand extends Command
      *
      * @return string
      */
-    protected function getStarterkitLicense()
+    protected function getStarterKitLicense()
     {
         if ($this->starterKitLicense) {
             return $this->starterKitLicense;
+        }
+
+        if (! $this->input->isInteractive()) {
+            throw new RuntimeException('A starter kit license is required, please pass using the `--license` option!');
         }
 
         $helper = $this->getHelper('question');
@@ -655,12 +800,30 @@ class NewCommand extends Command
     }
 
     /**
+     * Check if user has missing composer token.
+     *
+     * @param string $tokenKey
+     * @return bool
+     */
+    protected function hasMissingComposerToken($tokenKey)
+    {
+        $composer = $this->findComposer();
+
+        return ! $this
+            ->runCommand("{$composer} config --global --auth {$tokenKey}", true)
+            ->isSuccessful();
+    }
+
+    /**
      * Exit installation.
+     *
+     * @return \stdClass
      */
     protected function exitInstallation()
     {
         return new class {
-            function __call($method, $args) {
+            public function __call($method, $args)
+            {
                 return $this;
             }
         };

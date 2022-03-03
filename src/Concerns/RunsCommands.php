@@ -10,20 +10,22 @@ trait RunsCommands
      * Run the given command.
      *
      * @param string $command
+     * @param bool $disableOutput
      * @return Process
      */
-    protected function runCommand($command)
+    protected function runCommand($command, $disableOutput = false)
     {
-        return $this->runCommands([$command]);
+        return $this->runCommands([$command], $disableOutput);
     }
 
     /**
      * Run the given commands.
      *
      * @param array $commands
+     * @param bool $disableOutput
      * @return Process
      */
-    protected function runCommands($commands)
+    protected function runCommands($commands, $disableOutput = false)
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
@@ -55,9 +57,13 @@ trait RunsCommands
             }
         }
 
-        $process->run(function ($type, $line) {
-            $this->output->write('    '.$line);
-        });
+        if ($disableOutput) {
+            $process->disableOutput()->run();
+        } else {
+            $process->run(function ($type, $line) {
+                $this->output->write($line);
+            });
+        }
 
         return $process;
     }

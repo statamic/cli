@@ -25,7 +25,7 @@ Once installed, you should be able to run `statamic {command name}` from within 
 When you install starter kits, the CLI might present you with a warning that the GitHub API limit is reached. [Generate a Personal acces token](https://github.com/settings/tokens/new) and paste it in your terminal with this command so Composer will save it for future use:
 
 ```bash
-composer config --global github-oauth.github.com [your_token_here]
+composer config --global --auth github-oauth.github.com [your_token_here]
 ```
 
 Read more on this in the [Composer Docs](https://getcomposer.org/doc/articles/authentication-for-private-packages.md).
