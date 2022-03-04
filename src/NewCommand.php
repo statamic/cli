@@ -35,6 +35,7 @@ class NewCommand extends Command
     public $starterKitLicense;
     public $local;
     public $withConfig;
+    public $withoutDependencies;
     public $force;
     public $v2;
     public $baseInstallSuccessful;
@@ -56,6 +57,7 @@ class NewCommand extends Command
             ->addOption('license', null, InputOption::VALUE_OPTIONAL, 'Optionally provide explicit starter kit license')
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
+            ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
@@ -162,6 +164,7 @@ class NewCommand extends Command
         $this->starterKitLicense = $this->input->getOption('license');
         $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
+        $this->withoutDependencies = $this->input->getOption('without-dependencies');
 
         $this->force = $this->input->getOption('force');
 
@@ -204,6 +207,10 @@ class NewCommand extends Command
 
         if (! $this->starterKit && $this->withConfig) {
             throw new RuntimeException('Starter kit is required when using `--with-config` option!');
+        }
+
+        if (! $this->starterKit && $this->withoutDependencies) {
+            throw new RuntimeException('Starter kit is required when using `--without-dependencies` option!');
         }
 
         return $this;
@@ -501,6 +508,10 @@ class NewCommand extends Command
         if ($this->starterKitLicense) {
             $options[] = '--license';
             $options[] = $this->starterKitLicense;
+        }
+
+        if ($this->withoutDependencies) {
+            $options[] = '--without-dependencies';
         }
 
         $statusCode = (new Please($this->output))
