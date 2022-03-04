@@ -30,6 +30,7 @@ class NewCommand extends Command
     public $relativePath;
     public $absolutePath;
     public $name;
+    public $version;
     public $starterKit;
     public $starterKitVcs;
     public $starterKitLicense;
@@ -159,6 +160,10 @@ class NewCommand extends Command
             : getcwd();
 
         $this->name = pathinfo($this->absolutePath)['basename'];
+
+        $this->version = $this->input->getOption('dev')
+            ? 'dev-master'
+            : '';
 
         $this->starterKit = $this->input->getArgument('starter-kit');
         $this->starterKitLicense = $this->input->getOption('license');
@@ -721,11 +726,9 @@ class NewCommand extends Command
 
         $baseRepo = self::BASE_REPO;
 
-        $version = $this->getVersion();
-
         $directory = $this->pathIsCwd() ? '.' : $this->relativePath;
 
-        return $composer." create-project {$baseRepo} \"{$directory}\" {$version} --remove-vcs --prefer-dist";
+        return $composer." create-project {$baseRepo} \"{$directory}\" {$this->version} --remove-vcs --prefer-dist";
     }
 
     /**
@@ -841,14 +844,5 @@ class NewCommand extends Command
                 return $this;
             }
         };
-    }
-
-    protected function getVersion()
-    {
-        if ($this->input->getOption('dev')) {
-            return 'dev-master';
-        }
-
-        return '';
     }
 }
