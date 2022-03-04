@@ -30,11 +30,13 @@ class NewCommand extends Command
     public $relativePath;
     public $absolutePath;
     public $name;
+    public $version;
     public $starterKit;
     public $starterKitVcs;
     public $starterKitLicense;
     public $local;
     public $withConfig;
+    public $withoutDependencies;
     public $force;
     public $v2;
     public $baseInstallSuccessful;
@@ -56,6 +58,7 @@ class NewCommand extends Command
             ->addOption('license', null, InputOption::VALUE_OPTIONAL, 'Optionally provide explicit starter kit license')
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
+            ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
             ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
@@ -158,10 +161,15 @@ class NewCommand extends Command
 
         $this->name = pathinfo($this->absolutePath)['basename'];
 
+        $this->version = $this->input->getOption('dev')
+            ? 'dev-master'
+            : '';
+
         $this->starterKit = $this->input->getArgument('starter-kit');
         $this->starterKitLicense = $this->input->getOption('license');
         $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
+        $this->withoutDependencies = $this->input->getOption('without-dependencies');
 
         $this->force = $this->input->getOption('force');
 
@@ -204,6 +212,10 @@ class NewCommand extends Command
 
         if (! $this->starterKit && $this->withConfig) {
             throw new RuntimeException('Starter kit is required when using `--with-config` option!');
+        }
+
+        if (! $this->starterKit && $this->withoutDependencies) {
+            throw new RuntimeException('Starter kit is required when using `--without-dependencies` option!');
         }
 
         return $this;
@@ -503,6 +515,10 @@ class NewCommand extends Command
             $options[] = $this->starterKitLicense;
         }
 
+        if ($this->withoutDependencies) {
+            $options[] = '--without-dependencies';
+        }
+
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
             ->run('starter-kit:install', $this->starterKit, ...$options);
@@ -710,11 +726,9 @@ class NewCommand extends Command
 
         $baseRepo = self::BASE_REPO;
 
-        $version = $this->getVersion();
-
         $directory = $this->pathIsCwd() ? '.' : $this->relativePath;
 
-        return $composer." create-project {$baseRepo} \"{$directory}\" {$version} --remove-vcs --prefer-dist";
+        return $composer." create-project {$baseRepo} \"{$directory}\" {$this->version} --remove-vcs --prefer-dist";
     }
 
     /**
@@ -830,14 +844,5 @@ class NewCommand extends Command
                 return $this;
             }
         };
-    }
-
-    protected function getVersion()
-    {
-        if ($this->input->getOption('dev')) {
-            return 'dev-master';
-        }
-
-        return '';
     }
 }
