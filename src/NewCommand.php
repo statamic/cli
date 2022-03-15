@@ -32,7 +32,6 @@ class NewCommand extends Command
     public $name;
     public $version;
     public $starterKit;
-    public $starterKitVcs;
     public $starterKitLicense;
     public $local;
     public $withConfig;
@@ -88,8 +87,6 @@ class NewCommand extends Command
 
         $this
             ->askForRepo()
-            ->detectRepoVcs()
-            ->detectMissingVcsAuth()
             ->validateStarterKitLicense()
             ->installBaseProject()
             ->installStarterKit()
@@ -273,54 +270,6 @@ class NewCommand extends Command
 
         if ($this->isInvalidStarterKit()) {
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Detect starter kit repo vcs, using same precedence logic used in statamic/cms.
-     *
-     * @return $this
-     */
-    protected function detectRepoVcs()
-    {
-        if ($this->local) {
-            return $this;
-        }
-
-        $request = new Client(['http_errors' => false]);
-
-        if ($request->get("https://repo.packagist.org/p2/{$this->starterKit}.json")->getStatusCode() === 200) {
-            return $this;
-        }
-
-        if ($request->get("https://github.com/{$this->starterKit}")->getStatusCode() === 200) {
-            $this->starterKitVcs = 'github';
-        } elseif ($request->get($bitbucketUrl = "https://bitbucket.org/{$this->starterKit}.git")->getStatusCode() === 200) {
-            $this->starterKitVcs = 'bitbucket';
-        } elseif ($request->get($gitlabUrl = "https://gitlab.com/{$this->starterKit}")->getStatusCode() === 200) {
-            $this->starterKitVcs = 'gitlab';
-        }
-
-        return $this;
-    }
-
-    /**
-     * Detect missing starter kit repo vcs auth, and prompt user to properly authenticate.
-     *
-     * @return $this
-     */
-    protected function detectMissingVcsAuth()
-    {
-        if ($this->starterKitVcs === 'github' && $this->hasMissingComposerToken('github-oauth.github.com')) {
-            $this->output->write(PHP_EOL);
-            $this->output->write('<error>Composer could not authenticate with GitHub!</error>'.PHP_EOL);
-            $this->output->write('<comment>Please generate a personal access token at: https://github.com/settings/tokens/new</comment>'.PHP_EOL);
-            $this->output->write('<comment>Then save your token for future use by running the following command:</comment>'.PHP_EOL);
-            $this->output->write('<comment>composer config --global --auth github-oauth.github.com [your-token-here]</comment>'.PHP_EOL);
-
-            return $this->exitInstallation();
         }
 
         return $this;
@@ -814,21 +763,6 @@ class NewCommand extends Command
         }
 
         return $license;
-    }
-
-    /**
-     * Check if user has missing composer token.
-     *
-     * @param string $tokenKey
-     * @return bool
-     */
-    protected function hasMissingComposerToken($tokenKey)
-    {
-        $composer = $this->findComposer();
-
-        return ! $this
-            ->runCommand("{$composer} config --global --auth {$tokenKey}", true)
-            ->isSuccessful();
     }
 
     /**
