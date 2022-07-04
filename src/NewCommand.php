@@ -92,7 +92,8 @@ class NewCommand extends Command
             ->installStarterKit()
             ->makeSuperUser()
             ->notifyIfOldCliVersion()
-            ->showSuccessMessage();
+            ->showSuccessMessage()
+            ->askToSpreadJoy();
 
         return 0;
     }
@@ -614,6 +615,16 @@ class NewCommand extends Command
 
         $this->output->writeln("Build something rad!");
 
+        return $this;
+    }
+
+    /**
+     * Ask if user wants to star our GitHub repo.
+     *
+     * @return $this
+     */
+    protected function askToSpreadJoy()
+    {
         if (! $this->input->isInteractive()) {
             return $this;
         }
@@ -628,9 +639,9 @@ class NewCommand extends Command
             return $this;
         }
 
-        if(PHP_OS_FAMILY == 'Darwin') exec('open https://github.com/statamic/cms');
-        if(PHP_OS_FAMILY == 'Windows') exec('start https://github.com/statamic/cms');
-        if(PHP_OS_FAMILY == 'Linux') exec('xdg-open https://github.com/statamic/cms'); 
+        if (PHP_OS_FAMILY == 'Darwin') exec('open https://github.com/statamic/cms');
+        if (PHP_OS_FAMILY == 'Windows') exec('start https://github.com/statamic/cms');
+        if (PHP_OS_FAMILY == 'Linux') exec('xdg-open https://github.com/statamic/cms');
 
         return $this;
     }
