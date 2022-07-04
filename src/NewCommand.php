@@ -614,6 +614,24 @@ class NewCommand extends Command
 
         $this->output->writeln("Build something rad!");
 
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $questionText = 'Would you like to support us by starring the repo on GitHub? (yes/no) [<comment>no</comment>]: ';
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion($questionText, false);
+
+        $this->output->write(PHP_EOL);
+
+        if (! $helper->ask($this->input, $this->output, $question)) {
+            return $this;
+        }
+
+        if(PHP_OS_FAMILY == 'Darwin') exec('open https://github.com/statamic/cms');
+        if(PHP_OS_FAMILY == 'Windows') exec('start https://github.com/statamic/cms');
+        if(PHP_OS_FAMILY == 'Linux') exec('xdg-open https://github.com/statamic/cms'); 
+
         return $this;
     }
 
