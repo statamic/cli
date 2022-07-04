@@ -618,7 +618,7 @@ class NewCommand extends Command
             return $this;
         }
 
-        $questionText = 'Would you like to support us by starring the repo on GitHub? (yes/no) [<comment>no</comment>]: ';
+        $questionText = 'Would you like to spread the joy of Statamic by starring the repo? (yes/no) [<comment>no</comment>]: ';
         $helper = $this->getHelper('question');
         $question = new ConfirmationQuestion($questionText, false);
 
