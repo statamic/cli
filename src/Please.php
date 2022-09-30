@@ -2,9 +2,9 @@
 
 namespace Statamic\Cli;
 
-use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Exception\RuntimeException;
+use Symfony\Component\Process\Process;
 
 class Please
 {
@@ -15,7 +15,7 @@ class Please
     /**
      * Instantiate Statamic `please` command wrapper.
      *
-     * @param OutputInterface $output
+     * @param  OutputInterface  $output
      */
     public function __construct(OutputInterface $output)
     {
@@ -25,7 +25,7 @@ class Please
     /**
      * Get or set current working directory.
      *
-     * @param mixed $cwd
+     * @param  mixed  $cwd
      * @return mixed
      */
     public function cwd($cwd = null)
@@ -52,7 +52,7 @@ class Please
     /**
      * Run please command.
      *
-     * @param mixed $commandParts
+     * @param  mixed  $commandParts
      * @return int
      */
     public function run(...$commandParts)

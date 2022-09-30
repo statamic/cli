@@ -80,7 +80,7 @@ class LegacyInstaller
         $this->command->output->write('Updating file permissions...');
 
         foreach (['local', 'site', 'statamic', 'assets'] as $folder) {
-            $dir = $this->command->absolutePath . '/' . $folder;
+            $dir = $this->command->absolutePath.'/'.$folder;
             $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
 
             foreach ($iterator as $item) {
@@ -88,7 +88,7 @@ class LegacyInstaller
             }
         }
 
-        $this->command->output->writeln(" <info>[✔]</info>");
+        $this->command->output->writeln(' <info>[✔]</info>');
 
         return $this;
     }
@@ -101,7 +101,8 @@ class LegacyInstaller
 
         if (! $helper->ask($this->command->input, $this->command->output, $question)) {
             $this->command->output->writeln("\x1B[1A\x1B[2K{$questionText}<fg=red>[✘]</>");
-            $this->command->output->writeln("<comment>[!]</comment> You may create a user with <comment>php please make:user</comment>");
+            $this->command->output->writeln('<comment>[!]</comment> You may create a user with <comment>php please make:user</comment>');
+
             return $this;
         }
 
@@ -140,7 +141,7 @@ class LegacyInstaller
                 }
 
                 $this->progressBar->setProgress($downloaded);
-            }
+            },
         ]);
 
         $response = $client->get("https://outpost.statamic.com/v2/get/{$this->version}");
@@ -172,7 +173,7 @@ class LegacyInstaller
 
     protected function formatBytes($bytes)
     {
-        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         $bytes = max($bytes, 0);
         $pow = $bytes ? floor(log($bytes, 1024)) : 0;
         $pow = min($pow, count($units) - 1);

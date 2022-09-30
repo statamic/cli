@@ -4,8 +4,6 @@ namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
 use RuntimeException;
-use Statamic\Cli\Concerns;
-use Statamic\Cli\Please;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -65,8 +63,8 @@ class NewCommand extends Command
     /**
      * Execute the command.
      *
-     * @param \Symfony\Component\Console\Input\InputInterface $input
-     * @param \Symfony\Component\Console\Output\OutputInterface $output
+     * @param  \Symfony\Component\Console\Input\InputInterface  $input
+     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
      * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -138,8 +136,8 @@ class NewCommand extends Command
 
         $this->output->write(PHP_EOL);
         $this->output->write("<comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
-        $this->output->write("<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>".PHP_EOL);
-        $this->output->write("<comment>composer global update statamic/cli</comment>".PHP_EOL);
+        $this->output->write('<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
+        $this->output->write('<comment>composer global update statamic/cli</comment>'.PHP_EOL);
 
         return $this;
     }
@@ -180,6 +178,7 @@ class NewCommand extends Command
      * Validate arguments and options.
      *
      * @return $this
+     *
      * @throws RuntimeException
      */
     protected function validateArguments()
@@ -253,7 +252,7 @@ class NewCommand extends Command
             'Starter Kit',
         ];
 
-        $question = new ChoiceQuestion("Would you like to start with a blank site or starter kit? [<comment>Blank Site</comment>]", $options, 0);
+        $question = new ChoiceQuestion('Would you like to start with a blank site or starter kit? [<comment>Blank Site</comment>]', $options, 0);
 
         $choice = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
 
@@ -397,6 +396,7 @@ class NewCommand extends Command
      * Install base project.
      *
      * @return $this
+     *
      * @throws RuntimeException
      */
     protected function installBaseProject()
@@ -437,6 +437,7 @@ class NewCommand extends Command
      * Install starter kit.
      *
      * @return $this
+     *
      * @throws RuntimeException
      */
     protected function installStarterKit()
@@ -540,8 +541,8 @@ class NewCommand extends Command
         $please->run('make:user', '--super', $email);
 
         $updateUser = '\Statamic\Facades\User::findByEmail('.escapeshellarg($email).')'
-            . '->password('.escapeshellarg($password).')'
-            . '->makeSuper()';
+            .'->password('.escapeshellarg($password).')'
+            .'->makeSuper()';
 
         if ($name) {
             $updateUser .= '->set("name", '.escapeshellarg($name).')';
@@ -557,8 +558,8 @@ class NewCommand extends Command
     /**
      * Ask for basic input.
      *
-     * @param string $label
-     * @param bool $hiddenInput
+     * @param  string  $label
+     * @param  bool  $hiddenInput
      * @return mixed
      */
     protected function askForBasicInput($label, $hiddenInput = false)
@@ -573,7 +574,7 @@ class NewCommand extends Command
     /**
      * Validate email address.
      *
-     * @param string $email
+     * @param  string  $email
      * @return bool
      */
     protected function validateEmail($email)
@@ -582,7 +583,7 @@ class NewCommand extends Command
             return true;
         }
 
-        $this->output->write("<error>Invalid email address.</error>".PHP_EOL);
+        $this->output->write('<error>Invalid email address.</error>'.PHP_EOL);
 
         return false;
     }
@@ -590,7 +591,7 @@ class NewCommand extends Command
     /**
      * Validate password.
      *
-     * @param string $password
+     * @param  string  $password
      * @return bool
      */
     protected function validatePassword($password)
@@ -599,7 +600,7 @@ class NewCommand extends Command
             return true;
         }
 
-        $this->output->write("<error>The input must be at least 8 characters.</error>".PHP_EOL);
+        $this->output->write('<error>The input must be at least 8 characters.</error>'.PHP_EOL);
 
         return false;
     }
@@ -613,7 +614,7 @@ class NewCommand extends Command
     {
         $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
 
-        $this->output->writeln("Build something rad!");
+        $this->output->writeln('Build something rad!');
 
         return $this;
     }
@@ -639,9 +640,13 @@ class NewCommand extends Command
             return $this;
         }
 
-        if (PHP_OS_FAMILY == 'Darwin') exec('open https://github.com/statamic/cms');
-        if (PHP_OS_FAMILY == 'Windows') exec('start https://github.com/statamic/cms');
-        if (PHP_OS_FAMILY == 'Linux') exec('xdg-open https://github.com/statamic/cms');
+        if (PHP_OS_FAMILY == 'Darwin') {
+            exec('open https://github.com/statamic/cms');
+        } elseif (PHP_OS_FAMILY == 'Windows') {
+            exec('start https://github.com/statamic/cms');
+        } elseif (PHP_OS_FAMILY == 'Linux') {
+            exec('xdg-open https://github.com/statamic/cms');
+        }
 
         return $this;
     }
@@ -746,9 +751,9 @@ class NewCommand extends Command
     /**
      * Replace the given string in the given file.
      *
-     * @param string $search
-     * @param string $replace
-     * @param string $file
+     * @param  string  $search
+     * @param  string  $replace
+     * @param  string  $file
      */
     protected function replaceInFile(string $search, string $replace, string $file)
     {
@@ -801,7 +806,8 @@ class NewCommand extends Command
      */
     protected function exitInstallation()
     {
-        return new class {
+        return new class
+        {
             public function __call($method, $args)
             {
                 return $this;

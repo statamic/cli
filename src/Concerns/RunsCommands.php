@@ -9,8 +9,8 @@ trait RunsCommands
     /**
      * Run the given command.
      *
-     * @param string $command
-     * @param bool $disableOutput
+     * @param  string  $command
+     * @param  bool  $disableOutput
      * @return Process
      */
     protected function runCommand($command, $disableOutput = false)
@@ -21,8 +21,8 @@ trait RunsCommands
     /**
      * Run the given commands.
      *
-     * @param array $commands
-     * @param bool $disableOutput
+     * @param  array  $commands
+     * @param  bool  $disableOutput
      * @return Process
      */
     protected function runCommands($commands, $disableOutput = false)
