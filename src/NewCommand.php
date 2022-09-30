@@ -448,10 +448,12 @@ class NewCommand extends Command
 
         $options = [
             '--cli-install',
-            '--no-interaction',
             '--clear-site',
         ];
 
+        if (! $this->input->isInteractive()) {
+            $options[] = '--no-interaction';
+        }
 
         if ($this->local) {
             $options[] = '--local';
