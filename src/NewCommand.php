@@ -91,6 +91,7 @@ class NewCommand extends Command
             ->makeSuperUser()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
+            ->showPostInstallInstructions()
             ->askToSpreadJoy();
 
         return 0;
@@ -617,6 +618,26 @@ class NewCommand extends Command
         $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
 
         $this->output->writeln('Build something rad!');
+
+        return $this;
+    }
+
+    /**
+     * Show cached post-install instructions, if provided.
+     *
+     * @return $this
+     */
+    protected function showPostInstallInstructions()
+    {
+        if (! file_exists($instructionsPath = $this->absolutePath.'/storage/statamic/tmp/cli/post-install-instructions.txt')) {
+            return $this;
+        }
+
+        $this->output->write(PHP_EOL);
+
+        foreach (file($instructionsPath) as $line) {
+            $this->output->write('<comment>'.trim($line).'</comment>'.PHP_EOL);
+        }
 
         return $this;
     }
