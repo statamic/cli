@@ -42,9 +42,9 @@ class UpdateCommand extends Command
         $please = new Please($output);
 
         if ($please->isV2()) {
-            $please->run('update');
+            $output->writeln(PHP_EOL.'<error>Statamic v2 is no longer supported!</error>'.PHP_EOL);
 
-            return 0;
+            return 1;
         }
 
         $output->writeln(PHP_EOL.'<comment>NOTE: If you have previously updated using the CP, you may need to update the version in your composer.json before running this update!</comment>'.PHP_EOL);

@@ -70,21 +70,6 @@ class NewCommandIntegrationTest extends TestCase
     }
 
     /** @test */
-    public function it_can_scaffold_a_legacy_v2_statamic_app()
-    {
-        $this->assertAppNotExists();
-
-        $statusCode = $this->scaffoldNewApp(['--v2' => true]);
-
-        $this->assertSame(0, $statusCode);
-        $this->assertFileNotExists($this->appPath('artisan'));
-        $this->assertFileExists($this->appPath('please'));
-        $this->assertFileExists($this->appPath('local'));
-        $this->assertFileExists($this->appPath('site'));
-        $this->assertFileExists($this->appPath('statamic'));
-    }
-
-    /** @test */
     public function it_fails_if_application_folder_already_exists()
     {
         mkdir($this->appPath());
@@ -119,16 +104,6 @@ class NewCommandIntegrationTest extends TestCase
     {
         $this->assertRuntimeException(function () {
             $this->scaffoldNewApp(['name' => '.', '--force' => true]);
-        });
-
-        $this->assertAppNotExists();
-    }
-
-    /** @test */
-    public function it_fails_if_passing_starter_kit_to_v2_installation()
-    {
-        $this->assertRuntimeException(function () {
-            $this->scaffoldNewApp(['starter-kit' => 'statamic/starter-kit-cool-writings', '--v2' => true]);
         });
 
         $this->assertAppNotExists();

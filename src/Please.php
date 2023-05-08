@@ -10,7 +10,6 @@ class Please
 {
     protected $output;
     protected $cwd;
-    protected $v2;
 
     /**
      * Instantiate Statamic `please` command wrapper.
