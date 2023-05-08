@@ -16,8 +16,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class NewCommand extends Command
 {
-    use Concerns\RunsCommands,
-        Concerns\InstallsLegacy;
+    use Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -35,7 +34,6 @@ class NewCommand extends Command
     public $withConfig;
     public $withoutDependencies;
     public $force;
-    public $v2;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
 
@@ -56,7 +54,6 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
-            ->addOption('v2', null, InputOption::VALUE_NONE, 'Create a legacy Statamic v2 application (not recommended)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -77,13 +74,7 @@ class NewCommand extends Command
             ->notifyIfOldCliVersion()
             ->processArguments()
             ->validateArguments()
-            ->showStatamicTitleArt();
-
-        if ($this->v2) {
-            return $this->installV2();
-        }
-
-        $this
+            ->showStatamicTitleArt()
             ->askForRepo()
             ->validateStarterKitLicense()
             ->installBaseProject()
@@ -170,8 +161,6 @@ class NewCommand extends Command
 
         $this->force = $this->input->getOption('force');
 
-        $this->v2 = $this->input->getOption('v2');
-
         return $this;
     }
 
@@ -190,10 +179,6 @@ class NewCommand extends Command
 
         if ($this->force && $this->pathIsCwd()) {
             throw new RuntimeException('Cannot use --force option when using current directory for installation!');
-        }
-
-        if ($this->starterKit && $this->v2) {
-            throw new RuntimeException('Cannot use starter kit with legacy v2 installation!');
         }
 
         if ($this->starterKit && $this->isInvalidStarterKit()) {
