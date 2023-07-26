@@ -2,7 +2,7 @@
 
 ![Statamic 3.0+](https://img.shields.io/badge/Statamic-3.0+-FF269E?style=for-the-badge&link=https://statamic.com)
 
-🌴 Install and manage your **Statamic v4** projects from the command line.
+🌴 Install and manage your **Statamic** projects from the command line.
 
 - [Installing the CLI tool](#installing-the-cli-tool)
 - [Using the CLI tool](#using-the-cli-tool)
