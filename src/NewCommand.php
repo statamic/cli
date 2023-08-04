@@ -3,13 +3,15 @@
 namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\suggest;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -231,28 +233,24 @@ class NewCommand extends Command
             return $this;
         }
 
-        $helper = $this->getHelper('question');
+        $choice = select(
+            'Would you like to install a starter kit?',
+            options: [
+                $blankSiteOption = 'No, start with a blank site.',
+                'Yes, let me pick a Starter Kit.',
+            ],
+        );
 
-        $options = [
-            'Blank Site',
-            'Starter Kit',
-        ];
-
-        $question = new ChoiceQuestion('Would you like to start with a blank site or starter kit? [<comment>Blank Site</comment>]', $options, 0);
-
-        $choice = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
-
-        $this->output->write(PHP_EOL);
-
-        if ($choice === 'Blank Site') {
+        if ($choice === $blankSiteOption) {
             return $this;
         }
 
         $this->output->write('You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
 
-        $question = new Question('Enter the package name of the Starter Kit: ');
-
-        $this->starterKit = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+        $this->starterKit = suggest(
+            'Which starter kit would you like to install?',
+            fn ($value) => $this->searchStarterKits($value)
+        );
 
         if ($this->isInvalidStarterKit()) {
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
@@ -333,13 +331,7 @@ class NewCommand extends Command
      */
     protected function confirmUnlistedKit()
     {
-        $questionText = 'Starter kit not found on Statamic Marketplace! Install unlisted starter kit? (yes/no) [<comment>yes</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, true);
-
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! confirm('Starter kit not found on Statamic Marketplace! Install unlisted starter kit?')) {
             return $this->exitInstallation();
         }
 
@@ -821,5 +813,45 @@ class NewCommand extends Command
                 return $this;
             }
         };
+    }
+
+    private function searchStarterKits($query)
+    {
+        $arr = [
+            'studio1902/statamic-peak',
+            'statamic/starter-kit-cool-writings',
+            'statamic/starter-kit-starters-creek',
+            'duncanmcclean/sc-starter-kit',
+            'spatie/statamic-blade-starter-kit',
+            'joschuba/statamic-vite',
+            'statamic/starter-kit-multisimplicity',
+            'statamic/starter-kit-stumblr',
+            'lucky-media/cloud',
+            'lucky-media/landtamic',
+            'statamic/starter-kit-doogie-browser',
+            'statamic/starter-kit-link-in-the-bio',
+            'jmalko/acorns',
+            'lynnxio/frontee-boilerplate',
+            'Afan417/blogo-starter-kit',
+            'Stillat/the-agency-starter-kit',
+            'aero-zeppelin',
+            'jmalko/archimedes',
+            'statamic/starter-kit-podcaster',
+            'hettiger-statamic/stenciljs-starter-kit',
+            'lucky-media/resume',
+            'nystudio107/spin-up-statamic-starter',
+            'Developer314/Techex',
+            'scruples-studio/clean',
+            'Developer314/one-page-portfolio',
+            'Developer314/Edutel',
+            'sstottelaar/spark-starter-kit',
+            'zsoltjanes/chatamic-starter-kit',
+            'sstottelaar/crisp-resume-starter-kit',
+            'Developer314/freeman',
+            'Developer314/pathsoft',
+            'acquaint-softtech/resume01',
+        ];
+
+        return array_filter($arr, fn ($item) => str_contains($item, $query));
     }
 }
