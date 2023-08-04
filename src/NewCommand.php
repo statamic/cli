@@ -4,9 +4,16 @@ namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
 use function Laravel\Prompts\confirm;
+use Laravel\Prompts\ConfirmPrompt;
+use Laravel\Prompts\Prompt;
 use function Laravel\Prompts\select;
+use Laravel\Prompts\SelectPrompt;
 use function Laravel\Prompts\suggest;
+use Laravel\Prompts\SuggestPrompt;
 use RuntimeException;
+use Statamic\Cli\Theme\ConfirmPromptRenderer;
+use Statamic\Cli\Theme\SelectPromptRenderer;
+use Statamic\Cli\Theme\SuggestPromptRenderer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -72,6 +79,7 @@ class NewCommand extends Command
         $this->output = $output;
 
         $this
+            ->setupTheme()
             ->checkCliVersion()
             ->notifyIfOldCliVersion()
             ->processArguments()
@@ -88,6 +96,19 @@ class NewCommand extends Command
             ->askToSpreadJoy();
 
         return 0;
+    }
+
+    protected function setupTheme()
+    {
+        Prompt::addTheme('statamic', [
+            SelectPrompt::class => SelectPromptRenderer::class,
+            SuggestPrompt::class => SuggestPromptRenderer::class,
+            ConfirmPrompt::class => ConfirmPromptRenderer::class,
+        ]);
+
+        Prompt::theme('statamic');
+
+        return $this;
     }
 
     /**
@@ -213,11 +234,11 @@ class NewCommand extends Command
      */
     protected function showStatamicTitleArt()
     {
-        $this->output->write(PHP_EOL.'<fg=red>   _____ __        __                  _
+        $this->output->write(PHP_EOL."\e[38;2;255;38;158m   _____ __        __                  _
   / ___// /_____ _/ /_____ _____ ___  (_)____
   \__ \/ __/ __ `/ __/ __ `/ __ `__ \/ / ___/
  ___/ / /_/ /_/ / /_/ /_/ / / / / / / / /__
-/____/\__/\__,_/\__/\__,_/_/ /_/ /_/_/\___/</>'.PHP_EOL.PHP_EOL);
+/____/\__/\__,_/\__/\__,_/_/ /_/ /_/_/\___/\e[39m".PHP_EOL.PHP_EOL);
 
         return $this;
     }
