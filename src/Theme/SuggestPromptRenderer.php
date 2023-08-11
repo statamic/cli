@@ -6,5 +6,5 @@ use Laravel\Prompts\Themes\Default\SuggestPromptRenderer as Renderer;
 
 class SuggestPromptRenderer extends Renderer
 {
-    use HotPink;
+    use Teal;
 }
