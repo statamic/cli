@@ -47,6 +47,7 @@ class NewCommand extends Command
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
+    public $makeUser = false;
 
     /**
      * Configure the command options.
@@ -89,6 +90,7 @@ class NewCommand extends Command
             ->showStatamicTitleArt()
             ->askForRepo()
             ->validateStarterKitLicense()
+            ->askToMakeSuperUser()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
@@ -480,6 +482,24 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
         return $this;
     }
 
+    protected function askToMakeSuperUser()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $this->makeUser = confirm('Create a super user?', true);
+
+        $this->output->write($this->makeUser
+            ? "Great. You'll be prompted for details after installation."
+            : 'No problem. You can create one later with <comment>php please make:user</comment>.'
+        );
+
+        $this->output->write(PHP_EOL.PHP_EOL);
+
+        return $this;
+    }
+
     /**
      * Make super user.
      *
@@ -487,11 +507,7 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
      */
     protected function makeSuperUser()
     {
-        if (! $this->input->isInteractive()) {
-            return $this;
-        }
-
-        if (! confirm('Create a super user?', true)) {
+        if (! $this->makeUser) {
             return $this;
         }
 
