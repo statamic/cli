@@ -30,6 +30,7 @@ class NewCommand extends Command
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
     const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
+    const STATAMIC_API_URL = 'https://statamic.com/api/v1/';
 
     public $input;
     public $output;
@@ -38,6 +39,7 @@ class NewCommand extends Command
     public $name;
     public $version;
     public $starterKit;
+    public $starterKits;
     public $starterKitLicense;
     public $local;
     public $withConfig;
@@ -836,43 +838,29 @@ class NewCommand extends Command
         };
     }
 
-    private function searchStarterKits($query)
+    private function searchStarterKits($value)
     {
-        $arr = [
-            'studio1902/statamic-peak',
-            'statamic/starter-kit-cool-writings',
-            'statamic/starter-kit-starters-creek',
-            'duncanmcclean/sc-starter-kit',
-            'spatie/statamic-blade-starter-kit',
-            'joschuba/statamic-vite',
-            'statamic/starter-kit-multisimplicity',
-            'statamic/starter-kit-stumblr',
-            'lucky-media/cloud',
-            'lucky-media/landtamic',
-            'statamic/starter-kit-doogie-browser',
-            'statamic/starter-kit-link-in-the-bio',
-            'jmalko/acorns',
-            'lynnxio/frontee-boilerplate',
-            'Afan417/blogo-starter-kit',
-            'Stillat/the-agency-starter-kit',
-            'aero-zeppelin',
-            'jmalko/archimedes',
-            'statamic/starter-kit-podcaster',
-            'hettiger-statamic/stenciljs-starter-kit',
-            'lucky-media/resume',
-            'nystudio107/spin-up-statamic-starter',
-            'Developer314/Techex',
-            'scruples-studio/clean',
-            'Developer314/one-page-portfolio',
-            'Developer314/Edutel',
-            'sstottelaar/spark-starter-kit',
-            'zsoltjanes/chatamic-starter-kit',
-            'sstottelaar/crisp-resume-starter-kit',
-            'Developer314/freeman',
-            'Developer314/pathsoft',
-            'acquaint-softtech/resume01',
-        ];
+        $kits = $this->getStarterKits();
 
-        return array_filter($arr, fn ($item) => str_contains($item, $query));
+        return array_filter($kits, fn ($kit) => str_contains(strtolower($kit), strtolower($value)));
+    }
+
+    private function getStarterKits()
+    {
+        return $this->starterKits ??= $this->fetchStarterKits();
+    }
+
+    private function fetchStarterKits()
+    {
+        $request = new Client(['base_uri' => self::STATAMIC_API_URL]);
+
+        try {
+            $response = $request->get('marketplace/starter-kits', ['query' => ['perPage' => 100]]);
+            $json = json_decode($response->getBody(), true);
+
+            return array_map(fn ($item) => $item['github_repo'], $json['data']);
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 }
