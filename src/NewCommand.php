@@ -883,7 +883,7 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
             $options = [];
 
             foreach ($results as $value) {
-                $options[$value['github_repo']] = $value['name'].' ('.$value['github_repo'].')';
+                $options[$value['package']] = $value['name'].' ('.$value['package'].')';
             }
 
             return $options;
