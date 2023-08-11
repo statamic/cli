@@ -412,8 +412,6 @@ class NewCommand extends Command
             $commands[] = "chmod 755 \"$this->absolutePath/please\"";
         }
 
-        $this->output->write(PHP_EOL);
-
         $this->runCommands($commands);
 
         if (! $this->wasBaseInstallSuccessful()) {
