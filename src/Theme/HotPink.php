@@ -11,6 +11,6 @@ trait HotPink
 
     public function pink(string $text): string
     {
-        return "\e[38;2;255;38;158m{$text}\e[39m";
+        return "\e[38;2;255;51;167m{$text}\e[39m";
     }
 }
