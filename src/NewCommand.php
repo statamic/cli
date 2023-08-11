@@ -277,7 +277,7 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
             return $this;
         }
 
-        $this->output->write('You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
+        $this->output->write('  You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
 
         $this->starterKit = $this->normalizeStarterKitSelection(suggest(
             'Which starter kit would you like to install?',
@@ -327,9 +327,9 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
         $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
 
         if ($this->input->isInteractive()) {
+            $this->output->write('  <comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
+            $this->output->write("  <comment>{$marketplaceUrl}</comment>".PHP_EOL);
             $this->output->write(PHP_EOL);
-            $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
-            $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
         }
 
         $license = $this->getStarterKitLicense();
