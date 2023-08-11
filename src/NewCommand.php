@@ -486,7 +486,7 @@ class NewCommand extends Command
             return $this;
         }
 
-        if (! confirm('Create a super user?', false)) {
+        if (! confirm('Create a super user?', true)) {
             return $this;
         }
 
