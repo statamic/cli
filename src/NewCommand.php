@@ -20,7 +20,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -369,25 +368,18 @@ class NewCommand extends Command
      */
     protected function confirmSingleSiteLicense()
     {
-        $appendedContinueText = $this->input->isInteractive() ? ' Would you like to continue installation?' : PHP_EOL;
 
         $this->output->write(PHP_EOL);
         $this->output->write('<comment>Once successfully installed, this single-site license will be marked as used</comment>'.PHP_EOL);
-        $this->output->write("<comment>and cannot be installed on future Statamic sites!{$appendedContinueText}</comment>");
+        $this->output->write('<comment>and cannot be installed on future Statamic sites!</comment>');
 
         if (! $this->input->isInteractive()) {
             return $this;
         }
 
-        $helper = $this->getHelper('question');
+        $this->output->write(PHP_EOL.PHP_EOL);
 
-        $questionText = 'I am aware this is a single-site license (yes/no) [<comment>no</comment>]: ';
-
-        $question = new ConfirmationQuestion($questionText, false);
-
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! confirm('Would you like to continue installation?', false, 'I understand. Install now.', "No, I'll install it later.")) {
             return $this->exitInstallation();
         }
 
