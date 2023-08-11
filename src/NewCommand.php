@@ -495,13 +495,7 @@ class NewCommand extends Command
             return $this;
         }
 
-        $questionText = 'Create a super user? (yes/no) [<comment>no</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, false);
-
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! confirm('Create a super user?', false)) {
             return $this;
         }
 
