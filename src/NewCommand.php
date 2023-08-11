@@ -10,6 +10,7 @@ use function Laravel\Prompts\select;
 use Laravel\Prompts\SelectPrompt;
 use function Laravel\Prompts\suggest;
 use Laravel\Prompts\SuggestPrompt;
+use function Laravel\Prompts\text;
 use RuntimeException;
 use Statamic\Cli\Theme\ConfirmPromptRenderer;
 use Statamic\Cli\Theme\SelectPromptRenderer;
@@ -801,15 +802,7 @@ class NewCommand extends Command
             throw new RuntimeException('A starter kit license is required, please pass using the `--license` option!');
         }
 
-        $helper = $this->getHelper('question');
-
-        $question = new Question('Please enter your license key: ');
-
-        while (! isset($license)) {
-            $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
-        }
-
-        return $license;
+        return text('Please enter your license key', required: true);
     }
 
     /**
