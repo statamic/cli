@@ -653,13 +653,9 @@ class NewCommand extends Command
             return $this;
         }
 
-        $questionText = 'Would you like to spread the joy of Statamic by starring the repo? (yes/no) [<comment>no</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, false);
-
         $this->output->write(PHP_EOL);
 
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! confirm('Would you like to spread the joy of Statamic by starring the repo?', false, 'Absolutely', 'Maybe later')) {
             return $this;
         }
 
