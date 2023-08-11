@@ -48,6 +48,7 @@ class NewCommand extends Command
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
     public $makeUser = false;
+    public $spreadJoy = false;
 
     /**
      * Configure the command options.
@@ -91,13 +92,14 @@ class NewCommand extends Command
             ->askForRepo()
             ->validateStarterKitLicense()
             ->askToMakeSuperUser()
+            ->askToSpreadJoy()
+            ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
-            ->showPostInstallInstructions()
-            ->askToSpreadJoy();
+            ->showPostInstallInstructions();
 
         return 0;
     }
@@ -394,6 +396,34 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
     }
 
     /**
+     * Final confirmation
+     *
+     * @return $this
+     */
+    protected function readySetGo()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        if (! confirm('Ready?', yes: "Let's do this!")) {
+            return $this->exitInstallation();
+        }
+
+        if ($this->spreadJoy) {
+            if (PHP_OS_FAMILY == 'Darwin') {
+                exec('open https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Windows') {
+                exec('start https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Linux') {
+                exec('xdg-open https://github.com/statamic/cms');
+            }
+        }
+
+        return $this;
+    }
+
+    /**
      * Install base project.
      *
      * @return $this
@@ -491,8 +521,8 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
         $this->makeUser = confirm('Create a super user?', true);
 
         $this->output->write($this->makeUser
-            ? "Great. You'll be prompted for details after installation."
-            : 'No problem. You can create one later with <comment>php please make:user</comment>.'
+            ? "  Great. You'll be prompted for details after installation."
+            : '  No problem. You can create one later with <comment>php please make:user</comment>.'
         );
 
         $this->output->write(PHP_EOL.PHP_EOL);
@@ -623,6 +653,10 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
     {
         $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
 
+        if (! $this->spreadJoy) {
+            $this->output->writeln('Spread some joy and star our GitHub repo! https://github.com/statamic/cms');
+        }
+
         $this->output->writeln('Build something rad!');
 
         return $this;
@@ -659,18 +693,13 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
             return $this;
         }
 
-        $this->output->write(PHP_EOL);
+        $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
+            $yes = "Absolutely. I'll star it while you finish installing.",
+            $no = 'Maybe later',
+        ], $no);
 
-        if (! confirm('Would you like to spread the joy of Statamic by starring the repo?', false, 'Absolutely', 'Maybe later')) {
-            return $this;
-        }
-
-        if (PHP_OS_FAMILY == 'Darwin') {
-            exec('open https://github.com/statamic/cms');
-        } elseif (PHP_OS_FAMILY == 'Windows') {
-            exec('start https://github.com/statamic/cms');
-        } elseif (PHP_OS_FAMILY == 'Linux') {
-            exec('xdg-open https://github.com/statamic/cms');
+        if ($this->spreadJoy = $response === $yes) {
+            $this->output->write('  Awesome. The browser will open when the installation begins.'.PHP_EOL.PHP_EOL);
         }
 
         return $this;
