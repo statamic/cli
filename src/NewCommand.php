@@ -270,10 +270,10 @@ class NewCommand extends Command
 
         $this->output->write('You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
 
-        $this->starterKit = suggest(
+        $this->starterKit = $this->normalizeStarterKitSelection(suggest(
             'Which starter kit would you like to install?',
             fn ($value) => $this->searchStarterKits($value)
-        );
+        ));
 
         if ($this->isInvalidStarterKit()) {
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
@@ -856,11 +856,26 @@ class NewCommand extends Command
 
         try {
             $response = $request->get('marketplace/starter-kits', ['query' => ['perPage' => 100]]);
-            $json = json_decode($response->getBody(), true);
+            $results = json_decode($response->getBody(), true)['data'];
+            $options = [];
 
-            return array_map(fn ($item) => $item['github_repo'], $json['data']);
+            foreach ($results as $value) {
+                $options[$value['github_repo']] = $value['name'].' ('.$value['github_repo'].')';
+            }
+
+            return $options;
         } catch (\Exception $e) {
             return [];
         }
+    }
+
+    private function normalizeStarterKitSelection($kit)
+    {
+        // If it doesn't have a bracket it means they manually entered a value and didn't pick a suggestion.
+        if (! str_contains($kit, ' (')) {
+            return $kit;
+        }
+
+        return array_search($kit, $this->getStarterKits());
     }
 }
