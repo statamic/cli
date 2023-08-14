@@ -452,7 +452,7 @@ class NewCommand extends Command
             return $this;
         }
 
-        if (! confirm('Ready?', yes: "Let's do this!")) {
+        if (! confirm('Ready?', yes: "Let's do this!", no: 'Nah, shut it down.')) {
             return $this->exitInstallation();
         }
 
