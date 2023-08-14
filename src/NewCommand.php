@@ -3,24 +3,36 @@
 namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
+use function Laravel\Prompts\confirm;
+use Laravel\Prompts\ConfirmPrompt;
+use Laravel\Prompts\Prompt;
+use function Laravel\Prompts\select;
+use Laravel\Prompts\SelectPrompt;
+use function Laravel\Prompts\suggest;
+use Laravel\Prompts\SuggestPrompt;
+use function Laravel\Prompts\text;
+use Laravel\Prompts\TextPrompt;
 use RuntimeException;
+use Statamic\Cli\Theme\ConfirmPromptRenderer;
+use Statamic\Cli\Theme\SelectPromptRenderer;
+use Statamic\Cli\Theme\SuggestPromptRenderer;
+use Statamic\Cli\Theme\TextPromptRenderer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ChoiceQuestion;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 class NewCommand extends Command
 {
-    use Concerns\RunsCommands;
+    use Concerns\RunsCommands, Concerns\ConfiguresPrompts;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
     const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
+    const STATAMIC_API_URL = 'https://statamic.com/api/v1/';
 
     public $input;
     public $output;
@@ -29,6 +41,7 @@ class NewCommand extends Command
     public $name;
     public $version;
     public $starterKit;
+    public $starterKits;
     public $starterKitLicense;
     public $local;
     public $withConfig;
@@ -36,6 +49,8 @@ class NewCommand extends Command
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
+    public $makeUser = false;
+    public $spreadJoy = false;
 
     /**
      * Configure the command options.
@@ -57,35 +72,96 @@ class NewCommand extends Command
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
-    /**
-     * Execute the command.
-     *
-     * @param  \Symfony\Component\Console\Input\InputInterface  $input
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
-     * @return int
-     */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function initialize(InputInterface $input, OutputInterface $output)
     {
         $this->input = $input;
         $this->output = $output;
 
+        $this->configurePrompts($input, $output);
+
         $this
+            ->setupTheme()
             ->checkCliVersion()
             ->notifyIfOldCliVersion()
+            ->showStatamicTitleArt();
+    }
+
+    protected function interact(InputInterface $input, OutputInterface $output)
+    {
+        if (! $this->input->getArgument('name')) {
+            $this->input->setArgument('name', text(
+                label: 'What is the name of your project?',
+                placeholder: 'E.g. example-app',
+                required: 'The project name is required.',
+                validate: fn ($value) => preg_match('/[^\pL\pN\-_.]/', $value) !== 0
+                    ? 'The name may only contain letters, numbers, dashes, underscores, and periods.'
+                    : null,
+            ));
+        }
+    }
+
+    /**
+     * Execute the command.
+     *
+     * @return int
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        $this
             ->processArguments()
             ->validateArguments()
-            ->showStatamicTitleArt()
             ->askForRepo()
             ->validateStarterKitLicense()
+            ->askToMakeSuperUser()
+            ->askToSpreadJoy()
+            ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
-            ->showPostInstallInstructions()
-            ->askToSpreadJoy();
+            ->showPostInstallInstructions();
 
         return 0;
+    }
+
+    protected function promptUntilValid($prompt, $required, $validate, $output)
+    {
+        while (true) {
+            $result = $prompt();
+
+            if ($required && ($result === '' || $result === [] || $result === false)) {
+                $output->writeln('<error>'.(is_string($required) ? $required : 'Required.').'</error>');
+
+                continue;
+            }
+
+            if ($validate) {
+                $error = $validate($result);
+
+                if (is_string($error) && strlen($error) > 0) {
+                    $output->writeln("<error>{$error}</error>");
+
+                    continue;
+                }
+            }
+
+            return $result;
+        }
+    }
+
+    protected function setupTheme()
+    {
+        Prompt::addTheme('statamic', [
+            SelectPrompt::class => SelectPromptRenderer::class,
+            SuggestPrompt::class => SuggestPromptRenderer::class,
+            ConfirmPrompt::class => ConfirmPromptRenderer::class,
+            TextPrompt::class => TextPromptRenderer::class,
+        ]);
+
+        Prompt::theme('statamic');
+
+        return $this;
     }
 
     /**
@@ -211,11 +287,15 @@ class NewCommand extends Command
      */
     protected function showStatamicTitleArt()
     {
-        $this->output->write(PHP_EOL.'<fg=red>   _____ __        __                  _
-  / ___// /_____ _/ /_____ _____ ___  (_)____
-  \__ \/ __/ __ `/ __/ __ `/ __ `__ \/ / ___/
- ___/ / /_/ /_/ / /_/ /_/ / / / / / / / /__
-/____/\__/\__,_/\__/\__,_/_/ /_/ /_/_/\___/</>'.PHP_EOL.PHP_EOL);
+        $this->output->write(PHP_EOL."\e[38;2;255;51;167m              $$\                $$\                             $$\
+              $$ |               $$ |                            \__|
+  $$$$$$$\ $$$$$$\    $$$$$$\ $$$$$$\    $$$$$$\   $$$$$$\$$$$\  $$\  $$$$$$$\
+  $$  _____|\_$$  _|   \____$$\\_$$  _|   \____$$\  $$  _$$  _$$\ $$ |$$  _____|
+  \$$$$$$\     $$ |     $$$$$$$ | $$ |     $$$$$$$ |$$ / $$ / $$ |$$ |$$ /
+   \____$$\   $$ |$$\ $$  __$$ | $$ |$$\ $$  __$$ |$$ | $$ | $$ |$$ |$$ |
+  $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$\
+  \_______/    \____/  \_______|  \____/  \_______|\__| \__| \__|\__| \_______|
+        \e[39m".PHP_EOL);
 
         return $this;
     }
@@ -231,28 +311,24 @@ class NewCommand extends Command
             return $this;
         }
 
-        $helper = $this->getHelper('question');
+        $choice = select(
+            'Would you like to install a starter kit?',
+            options: [
+                $blankSiteOption = 'No, start with a blank site.',
+                'Yes, let me pick a Starter Kit.',
+            ],
+        );
 
-        $options = [
-            'Blank Site',
-            'Starter Kit',
-        ];
-
-        $question = new ChoiceQuestion('Would you like to start with a blank site or starter kit? [<comment>Blank Site</comment>]', $options, 0);
-
-        $choice = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
-
-        $this->output->write(PHP_EOL);
-
-        if ($choice === 'Blank Site') {
+        if ($choice === $blankSiteOption) {
             return $this;
         }
 
-        $this->output->write('You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
+        $this->output->write('  You can find starter kits at <info>https://statamic.com/starter-kits</info> 🏄'.PHP_EOL.PHP_EOL);
 
-        $question = new Question('Enter the package name of the Starter Kit: ');
-
-        $this->starterKit = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
+        $this->starterKit = $this->normalizeStarterKitSelection(suggest(
+            'Which starter kit would you like to install?',
+            fn ($value) => $this->searchStarterKits($value)
+        ));
 
         if ($this->isInvalidStarterKit()) {
             throw new RuntimeException('Please enter a valid composer package name (eg. hasselhoff/kung-fury)!');
@@ -297,9 +373,9 @@ class NewCommand extends Command
         $marketplaceUrl = "https://statamic.com/starter-kits/{$sellerSlug}/{$kitSlug}";
 
         if ($this->input->isInteractive()) {
+            $this->output->write('  <comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
+            $this->output->write("  <comment>{$marketplaceUrl}</comment>".PHP_EOL);
             $this->output->write(PHP_EOL);
-            $this->output->write('<comment>This is a paid starter kit. If you haven\'t already, you may purchase a license at:</comment>'.PHP_EOL);
-            $this->output->write("<comment>{$marketplaceUrl}</comment>".PHP_EOL);
         }
 
         $license = $this->getStarterKitLicense();
@@ -333,13 +409,7 @@ class NewCommand extends Command
      */
     protected function confirmUnlistedKit()
     {
-        $questionText = 'Starter kit not found on Statamic Marketplace! Install unlisted starter kit? (yes/no) [<comment>yes</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, true);
-
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! confirm('Starter kit not found on Statamic Marketplace! Install unlisted starter kit?')) {
             return $this->exitInstallation();
         }
 
@@ -353,26 +423,47 @@ class NewCommand extends Command
      */
     protected function confirmSingleSiteLicense()
     {
-        $appendedContinueText = $this->input->isInteractive() ? ' Would you like to continue installation?' : PHP_EOL;
 
         $this->output->write(PHP_EOL);
         $this->output->write('<comment>Once successfully installed, this single-site license will be marked as used</comment>'.PHP_EOL);
-        $this->output->write("<comment>and cannot be installed on future Statamic sites!{$appendedContinueText}</comment>");
+        $this->output->write('<comment>and cannot be installed on future Statamic sites!</comment>');
 
         if (! $this->input->isInteractive()) {
             return $this;
         }
 
-        $helper = $this->getHelper('question');
+        $this->output->write(PHP_EOL.PHP_EOL);
 
-        $questionText = 'I am aware this is a single-site license (yes/no) [<comment>no</comment>]: ';
-
-        $question = new ConfirmationQuestion($questionText, false);
-
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! confirm('Would you like to continue installation?', false, 'I understand. Install now.', "No, I'll install it later.")) {
             return $this->exitInstallation();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Final confirmation
+     *
+     * @return $this
+     */
+    protected function readySetGo()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        if (! confirm('Ready?', yes: "Yes, let's do this!", no: 'No, shut it down.')) {
+            return $this->exitInstallation();
+        }
+
+        if ($this->spreadJoy) {
+            if (PHP_OS_FAMILY == 'Darwin') {
+                exec('open https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Windows') {
+                exec('start https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Linux') {
+                exec('xdg-open https://github.com/statamic/cms');
+            }
         }
 
         return $this;
@@ -403,8 +494,6 @@ class NewCommand extends Command
             $commands[] = "chmod 755 \"$this->absolutePath/artisan\"";
             $commands[] = "chmod 755 \"$this->absolutePath/please\"";
         }
-
-        $this->output->write(PHP_EOL);
 
         $this->runCommands($commands);
 
@@ -469,6 +558,24 @@ class NewCommand extends Command
         return $this;
     }
 
+    protected function askToMakeSuperUser()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $this->makeUser = confirm('Create a super user?', false);
+
+        $this->output->write($this->makeUser
+            ? "  Great. You'll be prompted for details after installation."
+            : '  No problem. You can create one later with <comment>php please make:user</comment>.'
+        );
+
+        $this->output->write(PHP_EOL.PHP_EOL);
+
+        return $this;
+    }
+
     /**
      * Make super user.
      *
@@ -476,17 +583,7 @@ class NewCommand extends Command
      */
     protected function makeSuperUser()
     {
-        if (! $this->input->isInteractive()) {
-            return $this;
-        }
-
-        $questionText = 'Create a super user? (yes/no) [<comment>no</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, false);
-
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
+        if (! $this->makeUser) {
             return $this;
         }
 
@@ -602,6 +699,10 @@ class NewCommand extends Command
     {
         $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
 
+        if (! $this->spreadJoy) {
+            $this->output->writeln('Spread some joy and star our GitHub repo! https://github.com/statamic/cms');
+        }
+
         $this->output->writeln('Build something rad!');
 
         return $this;
@@ -638,23 +739,18 @@ class NewCommand extends Command
             return $this;
         }
 
-        $questionText = 'Would you like to spread the joy of Statamic by starring the repo? (yes/no) [<comment>no</comment>]: ';
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion($questionText, false);
+        $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
+            $yes = "Absolutely. I'll star it while you finish installing.",
+            $no = 'Maybe later',
+        ], $no);
 
-        $this->output->write(PHP_EOL);
-
-        if (! $helper->ask($this->input, $this->output, $question)) {
-            return $this;
+        if ($this->spreadJoy = $response === $yes) {
+            $this->output->write('  Awesome. The browser will open when the installation begins.');
+        } else {
+            $this->output->write('  You can star the GitHub repo at any time if you change your mind.');
         }
 
-        if (PHP_OS_FAMILY == 'Darwin') {
-            exec('open https://github.com/statamic/cms');
-        } elseif (PHP_OS_FAMILY == 'Windows') {
-            exec('start https://github.com/statamic/cms');
-        } elseif (PHP_OS_FAMILY == 'Linux') {
-            exec('xdg-open https://github.com/statamic/cms');
-        }
+        $this->output->write(PHP_EOL.PHP_EOL);
 
         return $this;
     }
@@ -758,10 +854,6 @@ class NewCommand extends Command
 
     /**
      * Replace the given string in the given file.
-     *
-     * @param  string  $search
-     * @param  string  $replace
-     * @param  string  $file
      */
     protected function replaceInFile(string $search, string $replace, string $file)
     {
@@ -796,15 +888,7 @@ class NewCommand extends Command
             throw new RuntimeException('A starter kit license is required, please pass using the `--license` option!');
         }
 
-        $helper = $this->getHelper('question');
-
-        $question = new Question('Please enter your license key: ');
-
-        while (! isset($license)) {
-            $license = $helper->ask($this->input, new SymfonyStyle($this->input, $this->output), $question);
-        }
-
-        return $license;
+        return text('Please enter your license key', required: true);
     }
 
     /**
@@ -821,5 +905,46 @@ class NewCommand extends Command
                 return $this;
             }
         };
+    }
+
+    private function searchStarterKits($value)
+    {
+        $kits = $this->getStarterKits();
+
+        return array_filter($kits, fn ($kit) => str_contains(strtolower($kit), strtolower($value)));
+    }
+
+    private function getStarterKits()
+    {
+        return $this->starterKits ??= $this->fetchStarterKits();
+    }
+
+    private function fetchStarterKits()
+    {
+        $request = new Client(['base_uri' => self::STATAMIC_API_URL]);
+
+        try {
+            $response = $request->get('marketplace/starter-kits', ['query' => ['perPage' => 100]]);
+            $results = json_decode($response->getBody(), true)['data'];
+            $options = [];
+
+            foreach ($results as $value) {
+                $options[$value['package']] = $value['name'].' ('.$value['package'].')';
+            }
+
+            return $options;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    private function normalizeStarterKitSelection($kit)
+    {
+        // If it doesn't have a bracket it means they manually entered a value and didn't pick a suggestion.
+        if (! str_contains($kit, ' (')) {
+            return $kit;
+        }
+
+        return array_search($kit, $this->getStarterKits());
     }
 }
