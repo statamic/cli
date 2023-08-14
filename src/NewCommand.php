@@ -128,7 +128,42 @@ class NewCommand extends Command
     {
         Prompt::fallbackWhen(! $this->input->isInteractive() || PHP_OS_FAMILY === 'Windows');
 
+        $input = $this->input;
+        $output = $this->output;
+
+        TextPrompt::fallbackUsing(fn (TextPrompt $prompt) => $this->promptUntilValid(
+            fn () => (new SymfonyStyle($input, $output))->ask($prompt->label, $prompt->default ?: null) ?? '',
+            $prompt->required,
+            $prompt->validate,
+            $output
+        ));
+
         return $this;
+    }
+
+    protected function promptUntilValid($prompt, $required, $validate, $output)
+    {
+        while (true) {
+            $result = $prompt();
+
+            if ($required && ($result === '' || $result === [] || $result === false)) {
+                $output->writeln('<error>'.(is_string($required) ? $required : 'Required.').'</error>');
+
+                continue;
+            }
+
+            if ($validate) {
+                $error = $validate($result);
+
+                if (is_string($error) && strlen($error) > 0) {
+                    $output->writeln("<error>{$error}</error>");
+
+                    continue;
+                }
+            }
+
+            return $result;
+        }
     }
 
     protected function setupTheme()
