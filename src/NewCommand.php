@@ -27,7 +27,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class NewCommand extends Command
 {
-    use Concerns\RunsCommands;
+    use Concerns\RunsCommands, Concerns\ConfiguresPrompts;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -77,8 +77,9 @@ class NewCommand extends Command
         $this->input = $input;
         $this->output = $output;
 
+        $this->configurePrompts($input, $output);
+
         $this
-            ->configurePrompts()
             ->setupTheme()
             ->checkCliVersion()
             ->notifyIfOldCliVersion()
@@ -122,23 +123,6 @@ class NewCommand extends Command
             ->showPostInstallInstructions();
 
         return 0;
-    }
-
-    protected function configurePrompts()
-    {
-        Prompt::fallbackWhen(! $this->input->isInteractive() || PHP_OS_FAMILY === 'Windows');
-
-        $input = $this->input;
-        $output = $this->output;
-
-        TextPrompt::fallbackUsing(fn (TextPrompt $prompt) => $this->promptUntilValid(
-            fn () => (new SymfonyStyle($input, $output))->ask($prompt->label, $prompt->default ?: null) ?? '',
-            $prompt->required,
-            $prompt->validate,
-            $output
-        ));
-
-        return $this;
     }
 
     protected function promptUntilValid($prompt, $required, $validate, $output)
