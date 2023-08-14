@@ -564,7 +564,7 @@ class NewCommand extends Command
             return $this;
         }
 
-        $this->makeUser = confirm('Create a super user?', true);
+        $this->makeUser = confirm('Create a super user?', false);
 
         $this->output->write($this->makeUser
             ? "  Great. You'll be prompted for details after installation."
