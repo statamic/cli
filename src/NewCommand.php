@@ -78,6 +78,7 @@ class NewCommand extends Command
         $this->output = $output;
 
         $this
+            ->configurePrompts()
             ->setupTheme()
             ->checkCliVersion()
             ->notifyIfOldCliVersion()
@@ -121,6 +122,13 @@ class NewCommand extends Command
             ->showPostInstallInstructions();
 
         return 0;
+    }
+
+    protected function configurePrompts()
+    {
+        Prompt::fallbackWhen(! $this->input->isInteractive() || PHP_OS_FAMILY === 'Windows');
+
+        return $this;
     }
 
     protected function setupTheme()
