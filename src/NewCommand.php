@@ -745,8 +745,12 @@ class NewCommand extends Command
         ], $no);
 
         if ($this->spreadJoy = $response === $yes) {
-            $this->output->write('  Awesome. The browser will open when the installation begins.'.PHP_EOL.PHP_EOL);
+            $this->output->write('  Awesome. The browser will open when the installation begins.');
+        } else {
+            $this->output->write('  You can star the GitHub repo at any time if you change your mind.');
         }
+
+        $this->output->write(PHP_EOL.PHP_EOL);
 
         return $this;
     }
