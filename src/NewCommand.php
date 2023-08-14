@@ -11,10 +11,12 @@ use Laravel\Prompts\SelectPrompt;
 use function Laravel\Prompts\suggest;
 use Laravel\Prompts\SuggestPrompt;
 use function Laravel\Prompts\text;
+use Laravel\Prompts\TextPrompt;
 use RuntimeException;
 use Statamic\Cli\Theme\ConfirmPromptRenderer;
 use Statamic\Cli\Theme\SelectPromptRenderer;
 use Statamic\Cli\Theme\SuggestPromptRenderer;
+use Statamic\Cli\Theme\TextPromptRenderer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -70,14 +72,7 @@ class NewCommand extends Command
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
-    /**
-     * Execute the command.
-     *
-     * @param  \Symfony\Component\Console\Input\InputInterface  $input
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
-     * @return int
-     */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function initialize(InputInterface $input, OutputInterface $output)
     {
         $this->input = $input;
         $this->output = $output;
@@ -86,9 +81,33 @@ class NewCommand extends Command
             ->setupTheme()
             ->checkCliVersion()
             ->notifyIfOldCliVersion()
+            ->showStatamicTitleArt();
+    }
+
+    protected function interact(InputInterface $input, OutputInterface $output)
+    {
+        if (! $this->input->getArgument('name')) {
+            $this->input->setArgument('name', text(
+                label: 'What is the name of your project?',
+                placeholder: 'E.g. example-app',
+                required: 'The project name is required.',
+                validate: fn ($value) => preg_match('/[^\pL\pN\-_.]/', $value) !== 0
+                    ? 'The name may only contain letters, numbers, dashes, underscores, and periods.'
+                    : null,
+            ));
+        }
+    }
+
+    /**
+     * Execute the command.
+     *
+     * @return int
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        $this
             ->processArguments()
             ->validateArguments()
-            ->showStatamicTitleArt()
             ->askForRepo()
             ->validateStarterKitLicense()
             ->askToMakeSuperUser()
@@ -110,6 +129,7 @@ class NewCommand extends Command
             SelectPrompt::class => SelectPromptRenderer::class,
             SuggestPrompt::class => SuggestPromptRenderer::class,
             ConfirmPrompt::class => ConfirmPromptRenderer::class,
+            TextPrompt::class => TextPromptRenderer::class,
         ]);
 
         Prompt::theme('statamic');
@@ -804,10 +824,6 @@ $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$
 
     /**
      * Replace the given string in the given file.
-     *
-     * @param  string  $search
-     * @param  string  $replace
-     * @param  string  $file
      */
     protected function replaceInFile(string $search, string $replace, string $file)
     {
