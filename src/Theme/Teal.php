@@ -2,6 +2,8 @@
 
 namespace Statamic\Cli\Theme;
 
+use Symfony\Component\Console\Terminal;
+
 trait Teal
 {
     public function cyan(string $text): string
@@ -11,6 +13,8 @@ trait Teal
 
     public function teal(string $text): string
     {
-        return "\e[38;2;1;215;176m{$text}\e[39m";
+        $color = Terminal::getColorMode()->convertFromHexToAnsiColorCode('01D7B0');
+
+        return "\e[3{$color}m{$text}\e[39m";
     }
 }
