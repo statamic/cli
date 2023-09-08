@@ -36,7 +36,7 @@ Read more on this in the [Composer Docs](https://getcomposer.org/doc/articles/au
 composer global update statamic/cli
 ```
 
-Run this command to update the CLI tool to the most recent published version.
+Run this command to update the CLI tool to the most recent published version. If there's been a major version release, you may need to run `require` instead of update.
 
 ## Using the CLI tool
 
