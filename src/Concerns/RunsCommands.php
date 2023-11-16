@@ -51,7 +51,11 @@ trait RunsCommands
 
         if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
             try {
-                $process->setTty(true);
+                if ($this->input->hasOption('no-interaction') && $this->input->getOption('no-interaction')) {
+                    $process->setTty(false);
+                } else {
+                    $process->setTty(true);
+                }
             } catch (RuntimeException $e) {
                 $this->output->writeln('Warning: '.$e->getMessage());
             }
