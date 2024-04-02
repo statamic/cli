@@ -425,8 +425,8 @@ class NewCommand extends Command
     {
 
         $this->output->write(PHP_EOL);
-        $this->output->write('<comment>Once successfully installed, this single-site license will be marked as used</comment>'.PHP_EOL);
-        $this->output->write('<comment>and cannot be installed on future Statamic sites!</comment>');
+        $this->output->write('<comment>Once successfully installed, this Starter Kit license will be marked as used</comment>'.PHP_EOL);
+        $this->output->write('<comment>and cannot be applied to future installations!</comment>');
 
         if (! $this->input->isInteractive()) {
             return $this;
@@ -434,7 +434,7 @@ class NewCommand extends Command
 
         $this->output->write(PHP_EOL.PHP_EOL);
 
-        if (! confirm('Would you like to continue installation?', false, 'I understand. Install now.', "No, I'll install it later.")) {
+        if (! confirm('Would you like to continue the installation?', false, 'I understand. Install now and mark used.', "No, I'll install it later.")) {
             return $this->exitInstallation();
         }
 
