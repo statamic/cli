@@ -46,9 +46,9 @@ class NewCommand extends Command
     public $starterKits;
     public $starterKitLicense;
     public $local;
-    public $packages;
     public $withConfig;
     public $withoutDependencies;
+    public $packages;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -72,6 +72,7 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
+            ->addOption('package', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party packages', [])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -240,6 +241,7 @@ class NewCommand extends Command
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
 
+        $this->packages = $this->input->getOption('package');
         $this->force = $this->input->getOption('force');
 
         return $this;
@@ -565,7 +567,7 @@ class NewCommand extends Command
 
     protected function askToInstallPackages()
     {
-        if (! $this->input->isInteractive()) {
+        if ($this->packages || ! $this->input->isInteractive()) {
             return $this;
         }
 
