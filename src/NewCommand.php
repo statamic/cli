@@ -44,6 +44,7 @@ class NewCommand extends Command
     public $starterKits;
     public $starterKitLicense;
     public $local;
+    public $packages;
     public $withConfig;
     public $withoutDependencies;
     public $force;
@@ -112,12 +113,14 @@ class NewCommand extends Command
             ->validateArguments()
             ->askForRepo()
             ->validateStarterKitLicense()
+            ->askToInstallPackages()
             ->askToMakeSuperUser()
             ->askToSpreadJoy()
             ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
+            ->installPackages()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
             ->showPostInstallInstructions();
@@ -554,6 +557,44 @@ class NewCommand extends Command
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem installing Statamic with the chosen starter kit!');
         }
+
+        return $this;
+    }
+
+    protected function askToInstallPackages()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $this->packages = multiselect('Would you like to install any first-party packages?', [
+            'collaboration' => 'Collaboration',
+            'eloquent-driver' => 'Eloquent Driver',
+            'ssg' => 'Static Site Generator',
+        ]);
+
+        if (count($this->packages) > 0) {
+            $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
+        }
+
+        return $this;
+    }
+
+    protected function installPackages()
+    {
+        if (! $this->packages) {
+            return $this;
+        }
+
+        collect($this->packages)->each(function (string $package) {
+            $statusCode = (new Please($this->output))
+                ->cwd($this->absolutePath)
+                ->run("install:{$package}");
+
+            if ($statusCode !== 0) {
+                throw new RuntimeException("There was a problem installing the [{$package}] package!");
+            }
+        });
 
         return $this;
     }
