@@ -3,14 +3,10 @@
 namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
-use function Laravel\Prompts\confirm;
 use Laravel\Prompts\ConfirmPrompt;
 use Laravel\Prompts\Prompt;
-use function Laravel\Prompts\select;
 use Laravel\Prompts\SelectPrompt;
-use function Laravel\Prompts\suggest;
 use Laravel\Prompts\SuggestPrompt;
-use function Laravel\Prompts\text;
 use Laravel\Prompts\TextPrompt;
 use RuntimeException;
 use Statamic\Cli\Theme\ConfirmPromptRenderer;
@@ -25,9 +21,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\multiselect;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\suggest;
+use function Laravel\Prompts\text;
+
 class NewCommand extends Command
 {
-    use Concerns\RunsCommands, Concerns\ConfiguresPrompts;
+    use Concerns\ConfiguresPrompts, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
