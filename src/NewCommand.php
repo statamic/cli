@@ -870,7 +870,7 @@ class NewCommand extends Command
      */
     protected function throwConnectionException()
     {
-        throw new RuntimeException('Cannot connect to [statamic.com] to validate license!');
+        throw new RuntimeException('Cannot connect to [statamic.com] to validate license! Please try again later.');
     }
 
     /**
