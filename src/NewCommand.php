@@ -48,7 +48,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
-    public $packages;
+    public $addons;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -72,7 +72,7 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
-            ->addOption('package', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party packages', [])
+            ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -116,14 +116,14 @@ class NewCommand extends Command
             ->validateArguments()
             ->askForRepo()
             ->validateStarterKitLicense()
-            ->askToInstallPackages()
+            ->askToInstallAddons()
             ->askToMakeSuperUser()
             ->askToSpreadJoy()
             ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
-            ->installPackages()
+            ->installAddons()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
             ->showPostInstallInstructions();
@@ -241,7 +241,7 @@ class NewCommand extends Command
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
 
-        $this->packages = $this->input->getOption('package');
+        $this->addons = $this->input->getOption('addon');
         $this->force = $this->input->getOption('force');
 
         return $this;
@@ -565,38 +565,38 @@ class NewCommand extends Command
         return $this;
     }
 
-    protected function askToInstallPackages()
+    protected function askToInstallAddons()
     {
-        if ($this->packages || ! $this->input->isInteractive()) {
+        if ($this->addons || ! $this->input->isInteractive()) {
             return $this;
         }
 
-        $this->packages = multiselect('Would you like to install any first-party packages?', [
+        $this->addons = multiselect('Would you like to install any first-party addons?', [
             'collaboration' => 'Collaboration',
             'eloquent-driver' => 'Eloquent Driver',
             'ssg' => 'Static Site Generator',
         ]);
 
-        if (count($this->packages) > 0) {
+        if (count($this->addons) > 0) {
             $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
         }
 
         return $this;
     }
 
-    protected function installPackages()
+    protected function installAddons()
     {
-        if (! $this->packages) {
+        if (! $this->addons) {
             return $this;
         }
 
-        collect($this->packages)->each(function (string $package) {
+        collect($this->addons)->each(function (string $addon) {
             $statusCode = (new Please($this->output))
                 ->cwd($this->absolutePath)
-                ->run("install:{$package}");
+                ->run("install:{$addon}");
 
             if ($statusCode !== 0) {
-                throw new RuntimeException("There was a problem installing the [{$package}] package!");
+                throw new RuntimeException("There was a problem installing the [{$addon}] addon!");
             }
         });
 
