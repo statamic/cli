@@ -3,14 +3,10 @@
 namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
-use function Laravel\Prompts\confirm;
 use Laravel\Prompts\ConfirmPrompt;
 use Laravel\Prompts\Prompt;
-use function Laravel\Prompts\select;
 use Laravel\Prompts\SelectPrompt;
-use function Laravel\Prompts\suggest;
 use Laravel\Prompts\SuggestPrompt;
-use function Laravel\Prompts\text;
 use Laravel\Prompts\TextPrompt;
 use RuntimeException;
 use Statamic\Cli\Theme\ConfirmPromptRenderer;
@@ -25,9 +21,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\multiselect;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\suggest;
+use function Laravel\Prompts\text;
+
 class NewCommand extends Command
 {
-    use Concerns\RunsCommands, Concerns\ConfiguresPrompts;
+    use Concerns\ConfiguresPrompts, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -46,6 +48,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
+    public $addons;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -69,6 +72,7 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
+            ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -112,12 +116,14 @@ class NewCommand extends Command
             ->validateArguments()
             ->askForRepo()
             ->validateStarterKitLicense()
+            ->askToInstallAddons()
             ->askToMakeSuperUser()
             ->askToSpreadJoy()
             ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
+            ->installAddons()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
             ->showPostInstallInstructions();
@@ -235,6 +241,7 @@ class NewCommand extends Command
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
 
+        $this->addons = $this->input->getOption('addon');
         $this->force = $this->input->getOption('force');
 
         return $this;
@@ -554,6 +561,44 @@ class NewCommand extends Command
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem installing Statamic with the chosen starter kit!');
         }
+
+        return $this;
+    }
+
+    protected function askToInstallAddons()
+    {
+        if ($this->addons || ! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $this->addons = multiselect('Would you like to install any first-party addons?', [
+            'collaboration' => 'Collaboration',
+            'eloquent-driver' => 'Eloquent Driver',
+            'ssg' => 'Static Site Generator',
+        ]);
+
+        if (count($this->addons) > 0) {
+            $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
+        }
+
+        return $this;
+    }
+
+    protected function installAddons()
+    {
+        if (! $this->addons) {
+            return $this;
+        }
+
+        collect($this->addons)->each(function (string $addon) {
+            $statusCode = (new Please($this->output))
+                ->cwd($this->absolutePath)
+                ->run("install:{$addon}");
+
+            if ($statusCode !== 0) {
+                throw new RuntimeException("There was a problem installing the [{$addon}] addon!");
+            }
+        });
 
         return $this;
     }
