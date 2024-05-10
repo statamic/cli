@@ -571,7 +571,19 @@ class NewCommand extends Command
             return $this;
         }
 
-        $this->addons = multiselect('Would you like to install any first-party addons?', [
+        $choice = select(
+            label: 'Would you like to install any first-party addons?',
+            options: [
+                $withoutAddonsOption = "No, I'm good for now.",
+                "Yes, let me pick.",
+            ],
+        );
+
+        if ($choice === $withoutAddonsOption) {
+            return $this;
+        }
+
+        $this->addons = multiselect('Which first-party addons do you want to install?', [
             'collaboration' => 'Collaboration',
             'eloquent-driver' => 'Eloquent Driver',
             'ssg' => 'Static Site Generator',
