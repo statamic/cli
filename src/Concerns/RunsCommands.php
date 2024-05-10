@@ -29,7 +29,7 @@ trait RunsCommands
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
-                if (substr($value, 0, 5) === 'chmod') {
+                if (substr($value, 0, 5) === 'chmod' || substr($value, 0, 3) === 'rm ') {
                     return $value;
                 }
 
@@ -39,7 +39,7 @@ trait RunsCommands
 
         if ($this->input->getOption('quiet')) {
             $commands = array_map(function ($value) {
-                if (substr($value, 0, 5) === 'chmod') {
+                if (substr($value, 0, 5) === 'chmod' || substr($value, 0, 3) === 'rm ') {
                     return $value;
                 }
 
@@ -51,7 +51,11 @@ trait RunsCommands
 
         if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
             try {
-                $process->setTty(true);
+                if ($this->input->hasOption('no-interaction') && $this->input->getOption('no-interaction')) {
+                    $process->setTty(false);
+                } else {
+                    $process->setTty(true);
+                }
             } catch (RuntimeException $e) {
                 $this->output->writeln('Warning: '.$e->getMessage());
             }
