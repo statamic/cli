@@ -571,11 +571,27 @@ class NewCommand extends Command
             return $this;
         }
 
-        $this->addons = multiselect('Would you like to install any first-party addons?', [
-            'collaboration' => 'Collaboration',
-            'eloquent-driver' => 'Eloquent Driver',
-            'ssg' => 'Static Site Generator',
-        ]);
+        $choice = select(
+            label: 'Would you like to install any first-party addons?',
+            options: [
+                $withoutAddonsOption = "No, I'm good for now.",
+                "Yes, let me pick.",
+            ],
+        );
+
+        if ($choice === $withoutAddonsOption) {
+            return $this;
+        }
+
+        $this->addons = multiselect(
+            label: 'Which first-party addons do you want to install?',
+            options: [
+                'collaboration' => 'Collaboration',
+                'eloquent-driver' => 'Eloquent Driver',
+                'ssg' => 'Static Site Generator',
+            ],
+            hint: 'Use the space bar to select options.'
+        );
 
         if (count($this->addons) > 0) {
             $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
