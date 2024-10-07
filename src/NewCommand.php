@@ -48,6 +48,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
+    public $shouldInstallEloquentDriver = false;
     public $addons;
     public $force;
     public $baseInstallSuccessful;
@@ -116,6 +117,7 @@ class NewCommand extends Command
             ->validateArguments()
             ->askForRepo()
             ->validateStarterKitLicense()
+            ->askToInstallEloquentDriver()
             ->askToInstallAddons()
             ->askToMakeSuperUser()
             ->askToSpreadJoy()
@@ -123,6 +125,7 @@ class NewCommand extends Command
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
+            ->installEloquentDriver()
             ->installAddons()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
@@ -565,6 +568,57 @@ class NewCommand extends Command
         return $this;
     }
 
+    protected function askToInstallEloquentDriver()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $choice = select(
+            label: 'Where do you want to store your content?',
+            options: [
+                'flat-file' => 'Flat-files',
+                'database' => 'Database',
+            ],
+            default : 'flat-file',
+            hint: 'You can always change this later.'
+        );
+
+        $this->shouldInstallEloquentDriver = $choice === 'database';
+
+        return $this;
+    }
+
+    protected function installEloquentDriver()
+    {
+        if (! $this->shouldInstallEloquentDriver) {
+            return $this;
+        }
+
+        $whichRepositories = select(
+            label: 'Do you want to store everything in the database, or just some things?',
+            options: [
+                'everything' => 'Everything',
+                'custom' => 'Let me choose',
+            ],
+            default: 'everything'
+        );
+
+        $please = (new Please($this->output))->cwd($this->absolutePath);
+
+        if ($whichRepositories === 'everything') {
+            $statusCode = $please->run('install:eloquent-driver', '--everything', '--import');
+        } else {
+            $statusCode = $please->run('install:eloquent-driver', '--import');
+        }
+
+        if ($statusCode !== 0) {
+            throw new RuntimeException("There was a problem when switching to the Eloquent Driver.");
+        }
+
+        return $this;
+    }
+
     protected function askToInstallAddons()
     {
         if ($this->addons || ! $this->input->isInteractive()) {
@@ -587,7 +641,6 @@ class NewCommand extends Command
             label: 'Which first-party addons do you want to install?',
             options: [
                 'collaboration' => 'Collaboration',
-                'eloquent-driver' => 'Eloquent Driver',
                 'ssg' => 'Static Site Generator',
             ],
             hint: 'Use the space bar to select options.'
