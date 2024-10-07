@@ -575,13 +575,13 @@ class NewCommand extends Command
         }
 
         $choice = select(
-            label: 'Where do you want to store your content?',
+            label: 'Where do you want to store your content and data?',
             options: [
-                'flat-file' => 'Flat-files',
+                'flat-file' => 'Flat Files',
                 'database' => 'Database',
             ],
             default : 'flat-file',
-            hint: 'You can always change this later.'
+            hint: 'When in doubt, choose Flat Files. You can always change this later.'
         );
 
         $this->shouldInstallEloquentDriver = $choice === 'database';
@@ -647,7 +647,7 @@ class NewCommand extends Command
         );
 
         if (count($this->addons) > 0) {
-            $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
+            $this->output->write("  Great. These will be installed right after your Statamic site is setup.".PHP_EOL.PHP_EOL);
         }
 
         return $this;
@@ -817,7 +817,7 @@ class NewCommand extends Command
             $this->output->writeln('Spread some joy and star our GitHub repo! https://github.com/statamic/cms');
         }
 
-        $this->output->writeln('Build something rad!');
+        $this->output->writeln('Build something awesome!');
 
         return $this;
     }
