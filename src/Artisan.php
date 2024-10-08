@@ -13,8 +13,6 @@ class Artisan
 
     /**
      * Instantiate Statamic `please` command wrapper.
-     *
-     * @param  OutputInterface  $output
      */
     public function __construct(OutputInterface $output)
     {
