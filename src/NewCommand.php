@@ -607,7 +607,7 @@ class NewCommand extends Command
         $please = (new Please($this->output))->cwd($this->absolutePath);
 
         if ($whichRepositories === 'everything') {
-            $statusCode = $please->run('install:eloquent-driver', '--everything', '--import');
+            $statusCode = $please->run('install:eloquent-driver', '--all', '--import');
         } else {
             $statusCode = $please->run('install:eloquent-driver', '--import');
         }
