@@ -29,7 +29,7 @@ use function Laravel\Prompts\text;
 
 class NewCommand extends Command
 {
-    use Concerns\ConfiguresPrompts, Concerns\RunsCommands;
+    use Concerns\ConfiguresPrompts, Concerns\RunsCommands, Concerns\ConfiguresDatabase;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -48,7 +48,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
-    public $shouldInstallEloquentDriver = false;
+    public $shouldConfigureDatabase = false;
     public $addons;
     public $force;
     public $baseInstallSuccessful;
@@ -125,6 +125,7 @@ class NewCommand extends Command
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
+            ->configureDatabaseConnection()
             ->installEloquentDriver()
             ->installAddons()
             ->notifyIfOldCliVersion()
@@ -511,7 +512,11 @@ class NewCommand extends Command
             throw new RuntimeException('There was a problem installing Statamic!');
         }
 
-        $this->updateEnvVars();
+        $this->replaceInFile(
+            'APP_URL=http://localhost',
+            'APP_URL=http://'.$this->name.'.test',
+            $this->absolutePath.'/.env'
+        );
 
         $this->baseInstallSuccessful = true;
 
@@ -584,14 +589,48 @@ class NewCommand extends Command
             hint: 'When in doubt, choose Flat Files. You can always change this later.'
         );
 
-        $this->shouldInstallEloquentDriver = $choice === 'database';
+        $this->shouldConfigureDatabase = $choice === 'database';
+
+        return $this;
+    }
+
+    protected function configureDatabaseConnection()
+    {
+        if (! $this->shouldConfigureDatabase) {
+            return $this;
+        }
+
+        $database = $this->promptForDatabaseOptions();
+
+        $this->configureDefaultDatabaseConnection($database, $this->name);
+
+        if ($database === 'sqlite') {
+            touch($this->absolutePath.'/database/database.sqlite');
+        }
+
+        $command = ['migrate'];
+
+        if (! $this->input->isInteractive()) {
+            $command[] = '--no-interaction';
+        }
+
+        $migrate = (new Artisan($this->output))
+            ->cwd($this->absolutePath)
+            ->run(...$command);
+
+        // When there's an issue running the migrations, it's likely because of connection issues.
+        // Let's let the user know and continue with the install process.
+        if ($migrate !== 0) {
+            $this->shouldConfigureDatabase = false;
+            $this->output->write('<error>There was a problem connecting to the database. Please run `php please install:eloquent-driver` after the install process is complete.</error>'.PHP_EOL);
+        }
 
         return $this;
     }
 
     protected function installEloquentDriver()
     {
-        if (! $this->shouldInstallEloquentDriver) {
+        if (! $this->shouldConfigureDatabase) {
             return $this;
         }
 
@@ -607,13 +646,9 @@ class NewCommand extends Command
         $please = (new Please($this->output))->cwd($this->absolutePath);
 
         if ($whichRepositories === 'everything') {
-            $statusCode = $please->run('install:eloquent-driver', '--all', '--import');
+            $please->run('install:eloquent-driver', '--all', '--import');
         } else {
-            $statusCode = $please->run('install:eloquent-driver', '--import');
-        }
-
-        if ($statusCode !== 0) {
-            throw new RuntimeException("There was a problem when switching to the Eloquent Driver.");
+            $please->run('install:eloquent-driver', '--import');
         }
 
         return $this;
@@ -949,31 +984,24 @@ class NewCommand extends Command
     }
 
     /**
-     * Update application env vars.
-     */
-    protected function updateEnvVars()
-    {
-        $this->replaceInFile(
-            'APP_URL=http://localhost',
-            'APP_URL=http://'.$this->name.'.test',
-            $this->absolutePath.'/.env'
-        );
-
-        $this->replaceInFile(
-            'DB_DATABASE=laravel',
-            'DB_DATABASE='.str_replace('-', '_', strtolower($this->name)),
-            $this->absolutePath.'/.env'
-        );
-    }
-
-    /**
      * Replace the given string in the given file.
      */
-    protected function replaceInFile(string $search, string $replace, string $file)
+    protected function replaceInFile(string|array $search, string|array $replace, string $file): void
     {
         file_put_contents(
             $file,
             str_replace($search, $replace, file_get_contents($file))
+        );
+    }
+
+    /**
+     * Replace the given string in the given file using regular expressions.
+     */
+    protected function pregReplaceInFile(string $pattern, string $replace, string $file): void
+    {
+        file_put_contents(
+            $file,
+            preg_replace($pattern, $replace, file_get_contents($file))
         );
     }
 
