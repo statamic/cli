@@ -22,9 +22,6 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\error;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -32,7 +29,7 @@ use function Laravel\Prompts\text;
 
 class NewCommand extends Command
 {
-    use Concerns\ConfiguresPrompts, Concerns\RunsCommands, Concerns\ConfiguresDatabase;
+    use Concerns\ConfiguresDatabase, Concerns\ConfiguresPrompts, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -626,9 +623,9 @@ class NewCommand extends Command
         if ($migrate !== 0) {
             $this->shouldConfigureDatabase = false;
 
-            $this->output->write("  <bg=red;options=bold> There was a problem connecting to the database. </>".PHP_EOL);
+            $this->output->write('  <bg=red;options=bold> There was a problem connecting to the database. </>'.PHP_EOL);
             $this->output->write(PHP_EOL);
-            $this->output->write("  Once the install process is complete, please run <info>php please install:eloquent-driver</info> to finish setting up the database.".PHP_EOL);
+            $this->output->write('  Once the install process is complete, please run <info>php please install:eloquent-driver</info> to finish setting up the database.'.PHP_EOL);
         }
 
         return $this;
@@ -677,7 +674,7 @@ class NewCommand extends Command
             label: 'Would you like to install any first-party addons?',
             options: [
                 $withoutAddonsOption = "No, I'm good for now.",
-                "Yes, let me pick.",
+                'Yes, let me pick.',
             ],
         );
 
@@ -695,7 +692,7 @@ class NewCommand extends Command
         );
 
         if (count($this->addons) > 0) {
-            $this->output->write("  Great. These will be installed right after your Statamic site is setup.".PHP_EOL.PHP_EOL);
+            $this->output->write('  Great. These will be installed right after your Statamic site is setup.'.PHP_EOL.PHP_EOL);
         }
 
         return $this;
