@@ -22,6 +22,8 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -622,7 +624,10 @@ class NewCommand extends Command
         // Let's let the user know and continue with the install process.
         if ($migrate !== 0) {
             $this->shouldConfigureDatabase = false;
-            $this->output->write('<error>There was a problem connecting to the database. Please run `php please install:eloquent-driver` after the install process is complete.</error>'.PHP_EOL);
+
+            $this->output->write("  <bg=red;options=bold> There was a problem connecting to the database. </>".PHP_EOL);
+            $this->output->write(PHP_EOL);
+            $this->output->write("  Once the install process is complete, please run <info>php please install:eloquent-driver</info> to finish setting up the database.".PHP_EOL);
         }
 
         return $this;
