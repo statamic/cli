@@ -23,6 +23,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
 use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
@@ -651,10 +652,12 @@ class NewCommand extends Command
         $please = (new Please($this->output))->cwd($this->absolutePath);
 
         if ($whichRepositories === 'everything') {
-            $please->run('install:eloquent-driver', '--all', '--import');
+            $please->run('install:eloquent-driver', '--all', '--import', '--without-messages');
         } else {
-            $please->run('install:eloquent-driver', '--import');
+            $please->run('install:eloquent-driver', '--import', '--without-messages');
         }
+
+        $this->output->write("  <info>[✔] Database setup complete!</info>", PHP_EOL);
 
         return $this;
     }
