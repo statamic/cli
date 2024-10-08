@@ -640,6 +640,11 @@ class NewCommand extends Command
             return $this;
         }
 
+        $options = [
+            '--import',
+            '--without-messages',
+        ];
+
         $whichRepositories = select(
             label: 'Do you want to store everything in the database, or just some things?',
             options: [
@@ -649,15 +654,15 @@ class NewCommand extends Command
             default: 'everything'
         );
 
-        $please = (new Please($this->output))->cwd($this->absolutePath);
-
         if ($whichRepositories === 'everything') {
-            $please->run('install:eloquent-driver', '--all', '--import', '--without-messages');
-        } else {
-            $please->run('install:eloquent-driver', '--import', '--without-messages');
+            $options[] = '--all';
         }
 
-        $this->output->write("  <info>[✔] Database setup complete!</info>", PHP_EOL);
+        (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('install:eloquent-driver', ...$options);
+
+        $this->output->write('  <info>[✔] Database setup complete!</info>', PHP_EOL);
 
         return $this;
     }
