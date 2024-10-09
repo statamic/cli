@@ -22,6 +22,8 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -36,8 +38,12 @@ class NewCommand extends Command
     const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
     const STATAMIC_API_URL = 'https://statamic.com/api/v1/';
 
+    /** @var InputInterface */
     public $input;
+
+    /** @var OutputInterface */
     public $output;
+    
     public $relativePath;
     public $absolutePath;
     public $name;
@@ -54,7 +60,6 @@ class NewCommand extends Command
     public $shouldUpdateCliToVersion = false;
     public $makeUser = false;
     public $pro = true;
-    public $spreadJoy = false;
 
     /**
      * Configure the command options.
@@ -113,24 +118,28 @@ class NewCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this
-            ->processArguments()
-            ->validateArguments()
-            ->askForRepo()
-            ->validateStarterKitLicense()
-            ->askToEnableStatamicPro()
-            ->askToInstallAddons()
-            ->askToMakeSuperUser()
-            ->askToSpreadJoy()
-            ->readySetGo()
-            ->installBaseProject()
-            ->installStarterKit()
-            ->enableStatamicPro()
-            ->makeSuperUser()
-            ->installAddons()
-            ->notifyIfOldCliVersion()
-            ->showSuccessMessage()
-            ->showPostInstallInstructions();
+        try {
+            $this
+                ->processArguments()
+                ->validateArguments()
+                ->askForRepo()
+                ->validateStarterKitLicense()
+                ->askToInstallAddons()
+                ->askToMakeSuperUser()
+                ->askToSpreadJoy()
+                ->installBaseProject()
+                ->installStarterKit()
+                ->enableStatamicPro()
+                ->makeSuperUser()
+                ->installAddons()
+                ->notifyIfOldCliVersion()
+                ->showSuccessMessage()
+                ->showPostInstallInstructions();
+        } catch (RuntimeException $e) {
+            $this->showError($e->getMessage());
+
+            return 1;
+        }
 
         return 0;
     }
@@ -213,9 +222,9 @@ class NewCommand extends Command
         }
 
         $this->output->write(PHP_EOL);
-        $this->output->write("<comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
-        $this->output->write('<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
-        $this->output->write('<comment>composer global update statamic/cli</comment>'.PHP_EOL);
+        $this->output->write("  <comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
+        $this->output->write('  <comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
+        $this->output->write('  <comment>composer global update statamic/cli</comment>'.PHP_EOL);
 
         return $this;
     }
@@ -298,15 +307,9 @@ class NewCommand extends Command
      */
     protected function showStatamicTitleArt()
     {
-        $this->output->write(PHP_EOL."<fg=#FF269E>              $$\                $$\                             $$\
-              $$ |               $$ |                            \__|
-  $$$$$$$\ $$$$$$\    $$$$$$\ $$$$$$\    $$$$$$\   $$$$$$\$$$$\  $$\  $$$$$$$\
-  $$  _____|\_$$  _|   \____$$\\_$$  _|   \____$$\  $$  _$$  _$$\ $$ |$$  _____|
-  \$$$$$$\     $$ |     $$$$$$$ | $$ |     $$$$$$$ |$$ / $$ / $$ |$$ |$$ /
-   \____$$\   $$ |$$\ $$  __$$ | $$ |$$\ $$  __$$ |$$ | $$ | $$ |$$ |$$ |
-  $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$\
-  \_______/    \____/  \_______|  \____/  \_______|\__| \__| \__|\__| \_______|
-        </>".PHP_EOL);
+        $this->output->write(PHP_EOL.'<fg=#D4FF4C>
+  █▀ ▀█▀ ▄▀█ ▀█▀ ▄▀█ █▀▄▀█ █ █▀▀
+  ▄█ ░█░ █▀█ ░█░ █▀█ █░▀░█ █ █▄▄</>'.PHP_EOL.PHP_EOL);
 
         return $this;
     }
@@ -420,7 +423,7 @@ class NewCommand extends Command
      */
     protected function confirmUnlistedKit()
     {
-        if (! confirm('Starter kit not found on Statamic Marketplace! Install unlisted starter kit?')) {
+        if (! confirm('Starter kit not found on Statamic Marketplace. Install unlisted starter kit?')) {
             return $this->exitInstallation();
         }
 
@@ -447,34 +450,6 @@ class NewCommand extends Command
 
         if (! confirm('Would you like to continue the installation?', false, 'I understand. Install now and mark used.', "No, I'll install it later.")) {
             return $this->exitInstallation();
-        }
-
-        return $this;
-    }
-
-    /**
-     * Final confirmation
-     *
-     * @return $this
-     */
-    protected function readySetGo()
-    {
-        if (! $this->input->isInteractive()) {
-            return $this;
-        }
-
-        if (! confirm('Ready?', yes: "Yes, let's do this!", no: 'No, shut it down.')) {
-            return $this->exitInstallation();
-        }
-
-        if ($this->spreadJoy) {
-            if (PHP_OS_FAMILY == 'Darwin') {
-                exec('open https://github.com/statamic/cms');
-            } elseif (PHP_OS_FAMILY == 'Windows') {
-                exec('start https://github.com/statamic/cms');
-            } elseif (PHP_OS_FAMILY == 'Linux') {
-                exec('xdg-open https://github.com/statamic/cms');
-            }
         }
 
         return $this;
@@ -631,7 +606,8 @@ class NewCommand extends Command
 
         $this->makeUser = confirm('Create a super user?', false);
 
-        $this->output->write($this->makeUser
+        $this->output->write(
+            $this->makeUser
             ? "  Great. You'll be prompted for details after installation."
             : '  No problem. You can create one later with <comment>php please make:user</comment>.'
         );
@@ -651,6 +627,9 @@ class NewCommand extends Command
         if (! $this->makeUser) {
             return $this;
         }
+
+        $this->output->write(PHP_EOL.PHP_EOL);
+        intro("Let's create your super user account.");
 
         // Since Windows cannot TTY, we'll capture their input here and make a user.
         if (PHP_OS_FAMILY === 'Windows') {
@@ -798,13 +777,11 @@ class NewCommand extends Command
      */
     protected function showSuccessMessage()
     {
-        $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
-
-        if (! $this->spreadJoy) {
-            $this->output->writeln('Spread some joy and star our GitHub repo! https://github.com/statamic/cms');
-        }
-
-        $this->output->writeln('Build something rad!');
+        $this->output->writeln(PHP_EOL.'  <info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
+        $this->output->writeln('  You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
+        $this->output->writeln('  The documentation is always available at <info>statamic.dev</info> and you can ');
+        $this->output->writeLn('  join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
+        $this->output->writeLn('  Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
 
         return $this;
     }
@@ -841,14 +818,20 @@ class NewCommand extends Command
         }
 
         $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
-            $yes = "Absolutely. I'll star it while you finish installing.",
+            $yes = "Absolutely",
             $no = 'Maybe later',
         ], $no);
 
-        if ($this->spreadJoy = $response === $yes) {
-            $this->output->write('  Awesome. The browser will open when the installation begins.');
+        if ($response === $yes) {
+            if (PHP_OS_FAMILY == 'Darwin') {
+                exec('open https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Windows') {
+                exec('start https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Linux') {
+                exec('xdg-open https://github.com/statamic/cms');
+            }
         } else {
-            $this->output->write('  You can star the GitHub repo at any time if you change your mind.');
+            $this->output->write('  No problem. You can do it at <info>github.com/statamic/cms</info> anytime.');
         }
 
         $this->output->write(PHP_EOL.PHP_EOL);
@@ -992,22 +975,6 @@ class NewCommand extends Command
         return text('Please enter your license key', required: true);
     }
 
-    /**
-     * Exit installation.
-     *
-     * @return \stdClass
-     */
-    protected function exitInstallation()
-    {
-        return new class
-        {
-            public function __call($method, $args)
-            {
-                return $this;
-            }
-        };
-    }
-
     private function searchStarterKits($value)
     {
         $kits = $this->getStarterKits();
@@ -1047,5 +1014,20 @@ class NewCommand extends Command
         }
 
         return array_search($kit, $this->getStarterKits());
+    }
+
+    private function showError(string $message): void
+    {
+        $whitespace = '';
+
+        for ($i = 0; $i < strlen($message); $i++) {
+            $whitespace .= ' ';
+        }
+
+        $this->output->write(PHP_EOL);
+        $this->output->write("  <bg=red>  {$whitespace}  </>".PHP_EOL);
+        $this->output->write("  <bg=red>  {$message}  </>".PHP_EOL);
+        $this->output->write("  <bg=red>  {$whitespace}  </>".PHP_EOL);
+        $this->output->write(PHP_EOL);
     }
 }
