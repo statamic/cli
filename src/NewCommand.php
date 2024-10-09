@@ -22,6 +22,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -294,15 +295,9 @@ class NewCommand extends Command
      */
     protected function showStatamicTitleArt()
     {
-        $this->output->write(PHP_EOL."<fg=#FF269E>              $$\                $$\                             $$\
-              $$ |               $$ |                            \__|
-  $$$$$$$\ $$$$$$\    $$$$$$\ $$$$$$\    $$$$$$\   $$$$$$\$$$$\  $$\  $$$$$$$\
-  $$  _____|\_$$  _|   \____$$\\_$$  _|   \____$$\  $$  _$$  _$$\ $$ |$$  _____|
-  \$$$$$$\     $$ |     $$$$$$$ | $$ |     $$$$$$$ |$$ / $$ / $$ |$$ |$$ /
-   \____$$\   $$ |$$\ $$  __$$ | $$ |$$\ $$  __$$ |$$ | $$ | $$ |$$ |$$ |
-  $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$\
-  \_______/    \____/  \_______|  \____/  \_______|\__| \__| \__|\__| \_______|
-        </>".PHP_EOL);
+        $this->output->write(PHP_EOL.'<fg=#D4FF4C>
+  █▀ ▀█▀ ▄▀█ ▀█▀ ▄▀█ █▀▄▀█ █ █▀▀
+  ▄█ ░█░ █▀█ ░█░ █▀█ █░▀░█ █ █▄▄</>'.PHP_EOL.PHP_EOL);
 
         return $this;
     }
@@ -416,7 +411,7 @@ class NewCommand extends Command
      */
     protected function confirmUnlistedKit()
     {
-        if (! confirm('Starter kit not found on Statamic Marketplace! Install unlisted starter kit?')) {
+        if (! confirm('Starter kit not found on Statamic Marketplace. Install unlisted starter kit?')) {
             return $this->exitInstallation();
         }
 
@@ -627,7 +622,8 @@ class NewCommand extends Command
 
         $this->makeUser = confirm('Create a super user?', false);
 
-        $this->output->write($this->makeUser
+        $this->output->write(
+            $this->makeUser
             ? "  Great. You'll be prompted for details after installation."
             : '  No problem. You can create one later with <comment>php please make:user</comment>.'
         );
@@ -647,6 +643,9 @@ class NewCommand extends Command
         if (! $this->makeUser) {
             return $this;
         }
+
+        $this->output->write(PHP_EOL.PHP_EOL);
+        intro("Let's create your super user account.");
 
         // Since Windows cannot TTY, we'll capture their input here and make a user.
         if (PHP_OS_FAMILY === 'Windows') {
@@ -758,13 +757,11 @@ class NewCommand extends Command
      */
     protected function showSuccessMessage()
     {
-        $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
-
-        if (! $this->spreadJoy) {
-            $this->output->writeln('Spread some joy and star our GitHub repo! https://github.com/statamic/cms');
-        }
-
-        $this->output->writeln('Build something rad!');
+        $this->output->writeln(PHP_EOL.'<info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
+        $this->output->writeln('You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
+        $this->output->writeln('The documentation is always available at <info>statamic.dev</info> and you can ');
+        $this->output->writeLn('join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
+        $this->output->writeLn('Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
 
         return $this;
     }
@@ -801,14 +798,14 @@ class NewCommand extends Command
         }
 
         $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
-            $yes = "Absolutely. I'll star it while you finish installing.",
+            $yes = "Absolutely. I'll star it when this install is finished.",
             $no = 'Maybe later',
         ], $no);
 
         if ($this->spreadJoy = $response === $yes) {
-            $this->output->write('  Awesome. The browser will open when the installation begins.');
+            $this->output->write('  Thank you! The browser will open when the installation begins.');
         } else {
-            $this->output->write('  You can star the GitHub repo at any time if you change your mind.');
+            $this->output->write('  No problem. You can do it at <info>github.com/statamic/cms</info> anytime.');
         }
 
         $this->output->write(PHP_EOL.PHP_EOL);
