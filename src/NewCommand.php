@@ -854,9 +854,11 @@ class NewCommand extends Command
             return $this;
         }
 
+        $name = $this->githubRepository ?? $this->name;
+        $visibility = $this->repositoryVisibility ?? 'private';
 
         $commands = [
-            "gh repo create {$this->githubRepository} --source=. --push --{$this->repositoryVisibility}",
+            "gh repo create {$name} --source=. --push --{$visibility}",
         ];
 
         $this->runCommands($commands, $this->absolutePath, disableOutput: true);
