@@ -259,8 +259,8 @@ class NewCommand extends Command
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
         $this->addons = $this->input->getOption('addon');
         $this->force = $this->input->getOption('force');
-        $this->initializeGitRepository = $this->input->getOption('git') || $this->input->getOption('github');
-        $this->shouldPushToGithub = $this->input->getOption('github');
+        $this->initializeGitRepository = $this->input->getOption('git') !== false || $this->input->getOption('github') !== false;
+        $this->shouldPushToGithub = $this->input->getOption('github') !== false;
         $this->githubRepository = $this->input->getOption('repo');
         $this->repositoryVisibility = $this->input->getOption('github');
 
@@ -819,25 +819,25 @@ class NewCommand extends Command
                 label: 'Would you like to create a new repository on GitHub?',
                 default: false
             );
-        }
 
-        if ($this->shouldPushToGithub && ! $this->githubRepository) {
-            $this->githubRepository = text(
-                label: 'What should be your full repository name?',
-                default: $this->name,
-                required: true,
-            );
-        }
+            if ($this->shouldPushToGithub && ! $this->githubRepository) {
+                $this->githubRepository = text(
+                    label: 'What should be your full repository name?',
+                    default: $this->name,
+                    required: true,
+                );
+            }
 
-        if ($this->shouldPushToGithub && ! $this->repositoryVisibility) {
-            $this->repositoryVisibility = select(
-                label: 'Should the repository be public or private?',
-                options: [
-                    'public' => 'Public',
-                    'private' => 'Private',
-                ],
-                default: 'private',
-            );
+            if ($this->shouldPushToGithub && ! $this->repositoryVisibility) {
+                $this->repositoryVisibility = select(
+                    label: 'Should the repository be public or private?',
+                    options: [
+                        'public' => 'Public',
+                        'private' => 'Private',
+                    ],
+                    default: 'private',
+                );
+            }
         }
 
         return $this;
