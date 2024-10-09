@@ -779,7 +779,7 @@ class NewCommand extends Command
         }
 
         $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
-            $yes = "Absolutely. I'll star it when this install is finished.",
+            $yes = "Absolutely",
             $no = 'Maybe later',
         ], $no);
 
