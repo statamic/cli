@@ -124,6 +124,7 @@ class NewCommand extends Command
                 ->validateArguments()
                 ->askForRepo()
                 ->validateStarterKitLicense()
+                ->askToEnableStatamicPro()
                 ->askToInstallAddons()
                 ->askToMakeSuperUser()
                 ->askToSpreadJoy()
