@@ -776,7 +776,7 @@ class NewCommand extends Command
      * @param  string  $directory
      * @return void
      */
-    protected function commitChanges(string $message, string $directory)
+    protected function commitChanges(string $message)
     {
         if (! $this->initializeGitRepository || ! $this->isGitInstalled()) {
             return;
@@ -787,7 +787,7 @@ class NewCommand extends Command
             "git commit -q -m \"$message\"",
         ];
 
-        $this->runCommands($commands, workingPath: $directory);
+        $this->runCommands($commands, workingPath: $this->absolutePath);
     }
 
     /**
