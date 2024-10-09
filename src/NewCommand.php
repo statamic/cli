@@ -60,9 +60,9 @@ class NewCommand extends Command
     public $makeUser = false;
     public $initializeGitRepository = false;
     public $shouldPushToGithub = false;
-    public $spreadJoy = false;
     public $githubRepository;
     public $repositoryVisibility;
+    public $spreadJoy = false;
 
     /**
      * Configure the command options.
