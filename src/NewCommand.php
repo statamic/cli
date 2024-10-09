@@ -764,9 +764,30 @@ class NewCommand extends Command
             "git branch -M {$branch}",
         ];
 
-        $this->runCommands($commands, $this->absolutePath);
+        $this->runCommands($commands, workingPath: $this->absolutePath);
 
         return $this;
+    }
+
+    /**
+     * Commit any changes in the current working directory.
+     *
+     * @param  string  $message
+     * @param  string  $directory
+     * @return void
+     */
+    protected function commitChanges(string $message, string $directory)
+    {
+        if (! $this->initializeGitRepository || ! $this->isGitInstalled()) {
+            return;
+        }
+
+        $commands = [
+            'git add .',
+            "git commit -q -m \"$message\"",
+        ];
+
+        $this->runCommands($commands, workingPath: $directory);
     }
 
     /**
