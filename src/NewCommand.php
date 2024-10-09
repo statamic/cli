@@ -59,6 +59,7 @@ class NewCommand extends Command
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
     public $makeUser = false;
+    public $pro = true;
 
     /**
      * Configure the command options.
@@ -77,6 +78,7 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
+            ->addOption('pro', null, InputOption::VALUE_NONE, 'Enable Statamic Pro for additional features')
             ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
@@ -122,11 +124,13 @@ class NewCommand extends Command
                 ->validateArguments()
                 ->askForRepo()
                 ->validateStarterKitLicense()
+                ->askToEnableStatamicPro()
                 ->askToInstallAddons()
                 ->askToMakeSuperUser()
                 ->askToSpreadJoy()
                 ->installBaseProject()
                 ->installStarterKit()
+                ->enableStatamicPro()
                 ->makeSuperUser()
                 ->installAddons()
                 ->notifyIfOldCliVersion()
@@ -250,7 +254,7 @@ class NewCommand extends Command
         $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
-
+        $this->pro = $this->input->getOption('pro') ?? true;
         $this->addons = $this->input->getOption('addon');
         $this->force = $this->input->getOption('force');
 
@@ -729,6 +733,42 @@ class NewCommand extends Command
         $this->output->write('<error>The input must be at least 8 characters.</error>'.PHP_EOL);
 
         return false;
+    }
+
+    protected function askToEnableStatamicPro()
+    {
+        if ($this->input->getOption('pro') !== false || ! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $this->pro = confirm(
+            label: 'Do you want to enable Statamic Pro?',
+            default: true,
+            hint: "Statamic Pro is required for some features. Like Multi-site, the Git integration, and more."
+        );
+
+        if ($this->pro) {
+            $this->output->write("  Before your site goes live, you will need to purchase a license on <info>statamic.com</info>.".PHP_EOL.PHP_EOL);
+        }
+
+        return $this;
+    }
+
+    protected function enableStatamicPro()
+    {
+        if (! $this->pro) {
+            return $this;
+        }
+
+        $statusCode = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('pro:enable');
+
+        if ($statusCode !== 0) {
+            throw new RuntimeException('There was a problem enabling Statamic Pro!');
+        }
+
+        return $this;
     }
 
     /**
