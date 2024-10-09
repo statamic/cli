@@ -80,6 +80,8 @@ class NewCommand extends Command
             ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
             ->addOption('git', null, InputOption::VALUE_NONE, 'Initialize a Git repository')
             ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
+            ->addOption('github', null, InputOption::VALUE_OPTIONAL, 'Create a new repository on GitHub', false)
+            ->addOption('organization', null, InputOption::VALUE_REQUIRED, 'The GitHub organization to create the new repository for')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -133,6 +135,7 @@ class NewCommand extends Command
             ->makeSuperUser()
             ->installAddons()
             ->initializeGitRepository()
+            ->pushToGithub()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
             ->showPostInstallInstructions();
@@ -716,7 +719,12 @@ class NewCommand extends Command
      */
     protected function askToInitializeGitRepository()
     {
-        if ($this->input->getOption('git') || ! $this->input->isInteractive() || ! $this->gitIsInstalled()) {
+        if (
+            ! $this->gitIsInstalled()
+            || ! $this->input->isInteractive()
+            || $this->input->getOption('git') !== false
+            || $this->input->getOption('github') !== false
+        ) {
             return $this;
         }
 
@@ -735,7 +743,10 @@ class NewCommand extends Command
      */
     protected function initializeGitRepository()
     {
-        if (! $this->input->getOption('git') || ! $this->gitIsInstalled()) {
+        if (
+            ! $this->gitIsInstalled()
+            || ($this->input->getOption('git') === false && $this->input->getOption('github') === false)
+        ) {
             return $this;
         }
 
@@ -753,6 +764,11 @@ class NewCommand extends Command
         return $this;
     }
 
+    /**
+     * Check if Git is installed.
+     *
+     * @return bool
+     */
     protected function gitIsInstalled(): bool
     {
         $process = new Process(['git', '--version']);
@@ -767,7 +783,7 @@ class NewCommand extends Command
      *
      * @return string
      */
-    protected function defaultBranch()
+    protected function defaultBranch(): string
     {
         $process = new Process(['git', 'config', '--global', 'init.defaultBranch']);
         $process->run();
@@ -775,6 +791,38 @@ class NewCommand extends Command
         $output = trim($process->getOutput());
 
         return $process->isSuccessful() && $output ? $output : 'main';
+    }
+
+    /**
+     * Create a GitHub repository and push the git log to it.
+     *
+     * @return $this
+     */
+    protected function pushToGithub()
+    {
+        if ($this->input->getOption('github') === false) {
+            return $this;
+        }
+
+        $process = new Process(['gh', 'auth', 'status']);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            $this->output->writeln('  <bg=yellow;fg=black> WARN </> Make sure the "gh" CLI tool is installed and that you\'re authenticated to GitHub. Skipping...'.PHP_EOL);
+
+            return $this;
+        }
+
+        $name = $this->input->getOption('organization') ? $this->input->getOption('organization')."/$this->name" : $this->name;
+        $flags = $this->input->getOption('github') ?: '--private';
+
+        $commands = [
+            "gh repo create {$name} --source=. --push {$flags}",
+        ];
+
+        $this->runCommands($commands, $this->absolutePath, disableOutput: true);
+
+        return $this;
     }
 
     /**
