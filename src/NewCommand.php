@@ -210,9 +210,9 @@ class NewCommand extends Command
         }
 
         $this->output->write(PHP_EOL);
-        $this->output->write("<comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
-        $this->output->write('<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
-        $this->output->write('<comment>composer global update statamic/cli</comment>'.PHP_EOL);
+        $this->output->write("  <comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
+        $this->output->write('  <comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
+        $this->output->write('  <comment>composer global update statamic/cli</comment>'.PHP_EOL);
 
         return $this;
     }
@@ -757,11 +757,11 @@ class NewCommand extends Command
      */
     protected function showSuccessMessage()
     {
-        $this->output->writeln(PHP_EOL.'<info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
-        $this->output->writeln('You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
-        $this->output->writeln('The documentation is always available at <info>statamic.dev</info> and you can ');
-        $this->output->writeLn('join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
-        $this->output->writeLn('Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
+        $this->output->writeln(PHP_EOL.'  <info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
+        $this->output->writeln('  You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
+        $this->output->writeln('  The documentation is always available at <info>statamic.dev</info> and you can ');
+        $this->output->writeLn('  join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
+        $this->output->writeLn('  Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
 
         return $this;
     }
