@@ -22,6 +22,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\error;
 use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
@@ -112,22 +113,28 @@ class NewCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this
-            ->processArguments()
-            ->validateArguments()
-            ->askForRepo()
-            ->validateStarterKitLicense()
-            ->askToInstallAddons()
-            ->askToMakeSuperUser()
-            ->askToSpreadJoy()
-            ->readySetGo()
-            ->installBaseProject()
-            ->installStarterKit()
-            ->makeSuperUser()
-            ->installAddons()
-            ->notifyIfOldCliVersion()
-            ->showSuccessMessage()
-            ->showPostInstallInstructions();
+        try {
+            $this
+                ->processArguments()
+                ->validateArguments()
+                ->askForRepo()
+                ->validateStarterKitLicense()
+                ->askToInstallAddons()
+                ->askToMakeSuperUser()
+                ->askToSpreadJoy()
+                ->readySetGo()
+                ->installBaseProject()
+                ->installStarterKit()
+                ->makeSuperUser()
+                ->installAddons()
+                ->notifyIfOldCliVersion()
+                ->showSuccessMessage()
+                ->showPostInstallInstructions();
+        } catch (RuntimeException $e) {
+            $this->showError($e->getMessage());
+
+            return 1;
+        }
 
         return 0;
     }
@@ -1004,5 +1011,20 @@ class NewCommand extends Command
         }
 
         return array_search($kit, $this->getStarterKits());
+    }
+
+    private function showError(string $message): void
+    {
+        $whitespace = '';
+
+        for ($i = 0; $i < strlen($message); $i++) {
+            $whitespace .= ' ';
+        }
+
+        $this->output->write(PHP_EOL);
+        $this->output->write("  <bg=red>  {$whitespace}  </>".PHP_EOL);
+        $this->output->write("  <bg=red>  {$message}  </>".PHP_EOL);
+        $this->output->write("  <bg=red>  {$whitespace}  </>".PHP_EOL);
+        $this->output->write(PHP_EOL);
     }
 }
