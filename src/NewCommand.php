@@ -49,7 +49,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
-    public $addons;
+    public $ssg;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -73,7 +73,7 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
-            ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
+            ->addOption('ssg', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Optionally install the Static Site Generator addon', [])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -117,14 +117,14 @@ class NewCommand extends Command
             ->validateArguments()
             ->askForRepo()
             ->validateStarterKitLicense()
-            ->askToInstallAddons()
+            ->askToInstallSsg()
             ->askToMakeSuperUser()
             ->askToSpreadJoy()
             ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
-            ->installAddons()
+            ->installSsg()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
             ->showPostInstallInstructions();
@@ -242,7 +242,7 @@ class NewCommand extends Command
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
 
-        $this->addons = $this->input->getOption('addon');
+        $this->ssg = $this->input->getOption('ssg');
         $this->force = $this->input->getOption('force');
 
         return $this;
@@ -566,47 +566,35 @@ class NewCommand extends Command
         return $this;
     }
 
-    protected function askToInstallAddons()
+    protected function askToInstallSsg()
     {
-        if ($this->addons || ! $this->input->isInteractive()) {
+        if ($this->ssg || ! $this->input->isInteractive()) {
             return $this;
         }
 
         if (confirm('Do you plan to generate a static site?', default: false)) {
-            $this->addons[] = 'ssg';
-        }
-
-        if ($this->pro ?? true) {
-            if (confirm('Do you want to enable real-time collaboration?', default: false)) {
-                $this->addons[] = 'collaboration';
-            }
-        }
-
-        if (count($this->addons) > 0) {
-            $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
+            $this->ssg = true;
         }
 
         return $this;
     }
 
-    protected function installAddons()
+    protected function installSsg()
     {
-        if (! $this->addons) {
+        if (! $this->ssg) {
             return $this;
         }
 
-        collect($this->addons)->each(function (string $addon) {
-            $this->output->write(PHP_EOL);
-            intro("Installing the [{$addon}] addon...");
+        $this->output->write(PHP_EOL);
+        intro("Installing the Static Site Generator addon...");
 
-            $statusCode = (new Please($this->output))
-                ->cwd($this->absolutePath)
-                ->run("install:{$addon}");
+        $statusCode = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run("install:ssg");
 
-            if ($statusCode !== 0) {
-                throw new RuntimeException("There was a problem installing the [{$addon}] addon!");
-            }
-        });
+        if ($statusCode !== 0) {
+            throw new RuntimeException("There was a problem installing the Static Site Generator addon!");
+        }
 
         return $this;
     }
