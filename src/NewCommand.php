@@ -58,7 +58,11 @@ class NewCommand extends Command
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
     public $makeUser = false;
+    public $initializeGitRepository = false;
+    public $shouldPushToGithub = false;
     public $spreadJoy = false;
+    public $githubRepository;
+    public $repositoryVisibility;
 
     /**
      * Configure the command options.
@@ -81,7 +85,7 @@ class NewCommand extends Command
             ->addOption('git', null, InputOption::VALUE_NONE, 'Initialize a Git repository')
             ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
             ->addOption('github', null, InputOption::VALUE_OPTIONAL, 'Create a new repository on GitHub', false)
-            ->addOption('organization', null, InputOption::VALUE_REQUIRED, 'The GitHub organization to create the new repository for')
+            ->addOption('repo', null, InputOption::VALUE_REQUIRED, 'Optionally specify the name of the GitHub repository')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -128,6 +132,7 @@ class NewCommand extends Command
             ->askToInstallAddons()
             ->askToMakeSuperUser()
             ->askToInitializeGitRepository()
+            ->askToPushToGithub()
             ->askToSpreadJoy()
             ->readySetGo()
             ->installBaseProject()
@@ -254,6 +259,10 @@ class NewCommand extends Command
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
         $this->addons = $this->input->getOption('addon');
         $this->force = $this->input->getOption('force');
+        $this->initializeGitRepository = $this->input->getOption('git') || $this->input->getOption('github');
+        $this->shouldPushToGithub = $this->input->getOption('github');
+        $this->githubRepository = $this->input->getOption('repo');
+        $this->repositoryVisibility = $this->input->getOption('github');
 
         return $this;
     }
@@ -720,18 +729,17 @@ class NewCommand extends Command
     protected function askToInitializeGitRepository()
     {
         if (
-            ! $this->gitIsInstalled()
+            $this->initializeGitRepository
+            || ! $this->isGitInstalled()
             || ! $this->input->isInteractive()
-            || $this->input->getOption('git') !== false
-            || $this->input->getOption('github') !== false
         ) {
             return $this;
         }
 
-        $this->input->setOption('git', confirm(
+        $this->initializeGitRepository = confirm(
             label: 'Would you like to initialize a Git repository?',
             default: false
-        ));
+        );
 
         return $this;
     }
@@ -743,10 +751,7 @@ class NewCommand extends Command
      */
     protected function initializeGitRepository()
     {
-        if (
-            ! $this->gitIsInstalled()
-            || ($this->input->getOption('git') === false && $this->input->getOption('github') === false)
-        ) {
+        if (! $this->initializeGitRepository || ! $this->isGitInstalled()) {
             return $this;
         }
 
@@ -769,7 +774,7 @@ class NewCommand extends Command
      *
      * @return bool
      */
-    protected function gitIsInstalled(): bool
+    protected function isGitInstalled(): bool
     {
         $process = new Process(['git', '--version']);
 
@@ -794,13 +799,57 @@ class NewCommand extends Command
     }
 
     /**
+     * Ask if the user wants to push the repository to GitHub.
+     *
+     * @return $this
+     */
+    protected function askToPushToGithub()
+    {
+        if (
+            ! $this->initializeGitRepository
+            || ! $this->isGitInstalled()
+            || ! $this->input->isInteractive()
+        ) {
+            return $this;
+        }
+
+        if (! $this->shouldPushToGithub) {
+            $this->shouldPushToGithub = confirm(
+                label: 'Would you like to create a new repository on GitHub?',
+                default: false
+            );
+        }
+
+        if ($this->shouldPushToGithub && ! $this->githubRepository) {
+            $this->githubRepository = text(
+                label: 'What should be your full repository name?',
+                default: $this->name,
+                required: true,
+            );
+        }
+
+        if ($this->shouldPushToGithub && ! $this->repositoryVisibility) {
+            $this->repositoryVisibility = select(
+                label: 'Should the repository be public or private?',
+                options: [
+                    'public' => 'Public',
+                    'private' => 'Private',
+                ],
+                default: 'private',
+            );
+        }
+
+        return $this;
+    }
+
+    /**
      * Create a GitHub repository and push the git log to it.
      *
      * @return $this
      */
     protected function pushToGithub()
     {
-        if ($this->input->getOption('github') === false) {
+        if (! $this->shouldPushToGithub) {
             return $this;
         }
 
@@ -813,11 +862,8 @@ class NewCommand extends Command
             return $this;
         }
 
-        $name = $this->input->getOption('organization') ? $this->input->getOption('organization')."/$this->name" : $this->name;
-        $flags = $this->input->getOption('github') ?: '--private';
-
         $commands = [
-            "gh repo create {$name} --source=. --push {$flags}",
+            "gh repo create {$this->githubRepository} --source=. --push --{$this->repositoryVisibility}",
         ];
 
         $this->runCommands($commands, $this->absolutePath, disableOutput: true);
