@@ -808,6 +808,7 @@ class NewCommand extends Command
         if (
             ! $this->initializeGitRepository
             || ! $this->isGitInstalled()
+            || ! $this->isGhInstalled()
             || ! $this->input->isInteractive()
         ) {
             return $this;
@@ -853,14 +854,6 @@ class NewCommand extends Command
             return $this;
         }
 
-        $process = new Process(['gh', 'auth', 'status']);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            $this->output->writeln('  <bg=yellow;fg=black> WARN </> Make sure the "gh" CLI tool is installed and that you\'re authenticated to GitHub. Skipping...'.PHP_EOL);
-
-            return $this;
-        }
 
         $commands = [
             "gh repo create {$this->githubRepository} --source=. --push --{$this->repositoryVisibility}",
@@ -869,6 +862,20 @@ class NewCommand extends Command
         $this->runCommands($commands, $this->absolutePath, disableOutput: true);
 
         return $this;
+    }
+
+    /**
+     * Check if GitHub's GH CLI tool is installed.
+     *
+     * @return bool
+     */
+    protected function isGhInstalled(): bool
+    {
+        $process = new Process(['gh', 'auth', 'status']);
+
+        $process->run();
+
+        return $process->isSuccessful();
     }
 
     /**
