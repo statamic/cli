@@ -54,7 +54,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
-    public $addons;
+    public $ssg;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -79,7 +79,7 @@ class NewCommand extends Command
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
             ->addOption('pro', null, InputOption::VALUE_NONE, 'Enable Statamic Pro for additional features')
-            ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
+            ->addOption('ssg', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Optionally install the Static Site Generator addon', [])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -125,14 +125,14 @@ class NewCommand extends Command
                 ->askForRepo()
                 ->validateStarterKitLicense()
                 ->askToEnableStatamicPro()
-                ->askToInstallAddons()
+                ->askToInstallSsg()
                 ->askToMakeSuperUser()
                 ->askToSpreadJoy()
                 ->installBaseProject()
                 ->installStarterKit()
                 ->enableStatamicPro()
                 ->makeSuperUser()
-                ->installAddons()
+                ->installSsg()
                 ->notifyIfOldCliVersion()
                 ->showSuccessMessage()
                 ->showPostInstallInstructions();
@@ -255,7 +255,7 @@ class NewCommand extends Command
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
         $this->pro = $this->input->getOption('pro') ?? true;
-        $this->addons = $this->input->getOption('addon');
+        $this->ssg = $this->input->getOption('ssg');
         $this->force = $this->input->getOption('force');
 
         return $this;
@@ -545,56 +545,35 @@ class NewCommand extends Command
         return $this;
     }
 
-    protected function askToInstallAddons()
+    protected function askToInstallSsg()
     {
-        if ($this->addons || ! $this->input->isInteractive()) {
+        if ($this->ssg || ! $this->input->isInteractive()) {
             return $this;
         }
 
-        $choice = select(
-            label: 'Would you like to install any first-party addons?',
-            options: [
-                $withoutAddonsOption = "No, I'm good for now.",
-                "Yes, let me pick.",
-            ],
-        );
-
-        if ($choice === $withoutAddonsOption) {
-            return $this;
-        }
-
-        $this->addons = multiselect(
-            label: 'Which first-party addons do you want to install?',
-            options: [
-                'collaboration' => 'Collaboration',
-                'eloquent-driver' => 'Eloquent Driver',
-                'ssg' => 'Static Site Generator',
-            ],
-            hint: 'Use the space bar to select options.'
-        );
-
-        if (count($this->addons) > 0) {
-            $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
+        if (confirm('Do you plan to generate a static site?', default: false)) {
+            $this->ssg = true;
         }
 
         return $this;
     }
 
-    protected function installAddons()
+    protected function installSsg()
     {
-        if (! $this->addons) {
+        if (! $this->ssg) {
             return $this;
         }
 
-        collect($this->addons)->each(function (string $addon) {
-            $statusCode = (new Please($this->output))
-                ->cwd($this->absolutePath)
-                ->run("install:{$addon}");
+        $this->output->write(PHP_EOL);
+        intro("Installing the Static Site Generator addon...");
 
-            if ($statusCode !== 0) {
-                throw new RuntimeException("There was a problem installing the [{$addon}] addon!");
-            }
-        });
+        $statusCode = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run("install:ssg");
+
+        if ($statusCode !== 0) {
+            throw new RuntimeException("There was a problem installing the Static Site Generator addon!");
+        }
 
         return $this;
     }
