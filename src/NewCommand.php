@@ -37,12 +37,8 @@ class NewCommand extends Command
     const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
     const STATAMIC_API_URL = 'https://statamic.com/api/v1/';
 
-    /** @var InputInterface */
     public $input;
-
-    /** @var OutputInterface */
     public $output;
-
     public $relativePath;
     public $absolutePath;
     public $name;
