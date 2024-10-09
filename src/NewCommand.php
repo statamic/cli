@@ -20,6 +20,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Process\Process;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\multiselect;
@@ -36,8 +37,12 @@ class NewCommand extends Command
     const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
     const STATAMIC_API_URL = 'https://statamic.com/api/v1/';
 
+    /** @var InputInterface */
     public $input;
+
+    /** @var OutputInterface */
     public $output;
+
     public $relativePath;
     public $absolutePath;
     public $name;
@@ -73,6 +78,8 @@ class NewCommand extends Command
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
             ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
+            ->addOption('git', null, InputOption::VALUE_NONE, 'Initialize a Git repository')
+            ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -118,12 +125,14 @@ class NewCommand extends Command
             ->validateStarterKitLicense()
             ->askToInstallAddons()
             ->askToMakeSuperUser()
+            ->askToInitializeGitRepository()
             ->askToSpreadJoy()
             ->readySetGo()
             ->installBaseProject()
             ->installStarterKit()
             ->makeSuperUser()
             ->installAddons()
+            ->initializeGitRepository()
             ->notifyIfOldCliVersion()
             ->showSuccessMessage()
             ->showPostInstallInstructions();
@@ -240,7 +249,6 @@ class NewCommand extends Command
         $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
-
         $this->addons = $this->input->getOption('addon');
         $this->force = $this->input->getOption('force');
 
@@ -699,6 +707,74 @@ class NewCommand extends Command
         $please->run('tinker', '--execute', $updateUser);
 
         return $this;
+    }
+
+    /**
+     * Ask to initialize a Git repository.
+     *
+     * @return $this
+     */
+    protected function askToInitializeGitRepository()
+    {
+        if ($this->input->getOption('git') || ! $this->input->isInteractive() || ! $this->gitIsInstalled()) {
+            return $this;
+        }
+
+        $this->input->setOption('git', confirm(
+            label: 'Would you like to initialize a Git repository?',
+            default: false
+        ));
+
+        return $this;
+    }
+
+    /**
+     * Initialize a Git repository.
+     *
+     * @return $this
+     */
+    protected function initializeGitRepository()
+    {
+        if (! $this->input->getOption('git') || ! $this->gitIsInstalled()) {
+            return $this;
+        }
+
+        $branch = $this->input->getOption('branch') ?: $this->defaultBranch();
+
+        $commands = [
+            'git init -q',
+            'git add .',
+            'git commit -q -m "Set up a fresh Statamic site"',
+            "git branch -M {$branch}",
+        ];
+
+        $this->runCommands($commands, $this->absolutePath);
+
+        return $this;
+    }
+
+    protected function gitIsInstalled(): bool
+    {
+        $process = new Process(['git', '--version']);
+
+        $process->run();
+
+        return $process->isSuccessful();
+    }
+
+    /**
+     * Return the local machine's default Git branch if set or default to `main`.
+     *
+     * @return string
+     */
+    protected function defaultBranch()
+    {
+        $process = new Process(['git', 'config', '--global', 'init.defaultBranch']);
+        $process->run();
+
+        $output = trim($process->getOutput());
+
+        return $process->isSuccessful() && $output ? $output : 'main';
     }
 
     /**
