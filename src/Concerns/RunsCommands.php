@@ -31,7 +31,11 @@ trait RunsCommands
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
-                if (substr($value, 0, 5) === 'chmod') {
+                if (str_starts_with($value, 'chmod')) {
+                    return $value;
+                }
+
+                if (str_starts_with($value, 'git')) {
                     return $value;
                 }
 
@@ -41,7 +45,11 @@ trait RunsCommands
 
         if ($this->input->getOption('quiet')) {
             $commands = array_map(function ($value) {
-                if (substr($value, 0, 5) === 'chmod') {
+                if (str_starts_with($value, 'chmod')) {
+                    return $value;
+                }
+
+                if (str_starts_with($value, 'git')) {
                     return $value;
                 }
 
@@ -55,7 +63,7 @@ trait RunsCommands
             try {
                 $process->setTty(true);
             } catch (RuntimeException $e) {
-                $this->output->writeln('Warning: '.$e->getMessage());
+                $this->output->writeln('  <bg=yellow;fg=black> WARN </> '.$e->getMessage().PHP_EOL);
             }
         }
 
@@ -63,7 +71,7 @@ trait RunsCommands
             $process->disableOutput()->run();
         } else {
             $process->run(function ($type, $line) {
-                $this->output->write($line);
+                $this->output->write('    '.$line);
             });
         }
 
