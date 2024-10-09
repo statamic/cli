@@ -748,7 +748,7 @@ class NewCommand extends Command
         );
 
         if ($this->pro) {
-            $this->output->write("  Before your site goes live, you will need to purchase a license on <info>Statamic.com</info>.".PHP_EOL.PHP_EOL);
+            $this->output->write("  Before your site goes live, you will need to purchase a license on <info>statamic.com</info>.".PHP_EOL.PHP_EOL);
         }
 
         return $this;
