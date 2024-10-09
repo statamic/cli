@@ -461,10 +461,6 @@ class NewCommand extends Command
             return $this;
         }
 
-        if (! confirm('Ready?', yes: "Yes, let's do this!", no: 'No, shut it down.')) {
-            return $this->exitInstallation();
-        }
-
         if ($this->spreadJoy) {
             if (PHP_OS_FAMILY == 'Darwin') {
                 exec('open https://github.com/statamic/cms');
@@ -954,22 +950,6 @@ class NewCommand extends Command
         }
 
         return text('Please enter your license key', required: true);
-    }
-
-    /**
-     * Exit installation.
-     *
-     * @return \stdClass
-     */
-    protected function exitInstallation()
-    {
-        return new class
-        {
-            public function __call($method, $args)
-            {
-                return $this;
-            }
-        };
     }
 
     private function searchStarterKits($value)
