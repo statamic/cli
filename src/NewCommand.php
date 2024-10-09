@@ -122,7 +122,6 @@ class NewCommand extends Command
                 ->askToInstallAddons()
                 ->askToMakeSuperUser()
                 ->askToSpreadJoy()
-                ->readySetGo()
                 ->installBaseProject()
                 ->installStarterKit()
                 ->makeSuperUser()
@@ -445,30 +444,6 @@ class NewCommand extends Command
 
         if (! confirm('Would you like to continue the installation?', false, 'I understand. Install now and mark used.', "No, I'll install it later.")) {
             return $this->exitInstallation();
-        }
-
-        return $this;
-    }
-
-    /**
-     * Final confirmation
-     *
-     * @return $this
-     */
-    protected function readySetGo()
-    {
-        if (! $this->input->isInteractive()) {
-            return $this;
-        }
-
-        if ($this->spreadJoy) {
-            if (PHP_OS_FAMILY == 'Darwin') {
-                exec('open https://github.com/statamic/cms');
-            } elseif (PHP_OS_FAMILY == 'Windows') {
-                exec('start https://github.com/statamic/cms');
-            } elseif (PHP_OS_FAMILY == 'Linux') {
-                exec('xdg-open https://github.com/statamic/cms');
-            }
         }
 
         return $this;
@@ -805,8 +780,14 @@ class NewCommand extends Command
             $no = 'Maybe later',
         ], $no);
 
-        if ($this->spreadJoy = $response === $yes) {
-            $this->output->write('  Thank you! The browser will open when the installation begins.');
+        if ($response === $yes) {
+            if (PHP_OS_FAMILY == 'Darwin') {
+                exec('open https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Windows') {
+                exec('start https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Linux') {
+                exec('xdg-open https://github.com/statamic/cms');
+            }
         } else {
             $this->output->write('  No problem. You can do it at <info>github.com/statamic/cms</info> anytime.');
         }
