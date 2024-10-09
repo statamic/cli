@@ -22,6 +22,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -571,27 +572,15 @@ class NewCommand extends Command
             return $this;
         }
 
-        $choice = select(
-            label: 'Would you like to install any first-party addons?',
-            options: [
-                $withoutAddonsOption = "No, I'm good for now.",
-                "Yes, let me pick.",
-            ],
-        );
-
-        if ($choice === $withoutAddonsOption) {
-            return $this;
+        if (confirm('Do you plan to generate a static site?', default: false)) {
+            $this->addons[] = 'ssg';
         }
 
-        $this->addons = multiselect(
-            label: 'Which first-party addons do you want to install?',
-            options: [
-                'collaboration' => 'Collaboration',
-                'eloquent-driver' => 'Eloquent Driver',
-                'ssg' => 'Static Site Generator',
-            ],
-            hint: 'Use the space bar to select options.'
-        );
+        if ($this->pro ?? true) {
+            if (confirm('Do you want to enable real-time collaboration?', default: false)) {
+                $this->addons[] = 'collaboration';
+            }
+        }
 
         if (count($this->addons) > 0) {
             $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
@@ -607,6 +596,9 @@ class NewCommand extends Command
         }
 
         collect($this->addons)->each(function (string $addon) {
+            $this->output->write(PHP_EOL);
+            intro("Installing the [{$addon}] addon...");
+
             $statusCode = (new Please($this->output))
                 ->cwd($this->absolutePath)
                 ->run("install:{$addon}");
