@@ -744,7 +744,7 @@ class NewCommand extends Command
         $this->pro = confirm(
             label: 'Do you want to enable Statamic Pro?',
             default: true,
-            hint: "Statamic Pro is required for some features. Like Multi-site, the Git integration and more."
+            hint: "Statamic Pro is required for some features. Like Multi-site, the Git integration, and more."
         );
 
         if ($this->pro) {
