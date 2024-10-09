@@ -766,27 +766,6 @@ class NewCommand extends Command
     }
 
     /**
-     * Commit any changes in the current working directory.
-     *
-     * @param  string  $message
-     * @param  string  $directory
-     * @return void
-     */
-    protected function commitChanges(string $message)
-    {
-        if (! $this->initializeGitRepository || ! $this->isGitInstalled()) {
-            return;
-        }
-
-        $commands = [
-            'git add .',
-            "git commit -q -m \"$message\"",
-        ];
-
-        $this->runCommands($commands, workingPath: $this->absolutePath);
-    }
-
-    /**
      * Check if Git is installed.
      *
      * @return bool
