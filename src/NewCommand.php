@@ -59,7 +59,6 @@ class NewCommand extends Command
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
     public $makeUser = false;
-    public $spreadJoy = false;
 
     /**
      * Configure the command options.
