@@ -23,6 +23,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\intro;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -37,8 +39,12 @@ class NewCommand extends Command
     const GITHUB_LATEST_RELEASE_ENDPOINT = 'https://api.github.com/repos/statamic/cli/releases/latest';
     const STATAMIC_API_URL = 'https://statamic.com/api/v1/';
 
+    /** @var InputInterface */
     public $input;
+
+    /** @var OutputInterface */
     public $output;
+
     public $relativePath;
     public $absolutePath;
     public $name;
@@ -49,7 +55,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
-    public $addons;
+    public $ssg;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -58,6 +64,7 @@ class NewCommand extends Command
     public $shouldPushToGithub = false;
     public $githubRepository;
     public $repositoryVisibility;
+    public $pro = true;
     public $spreadJoy = false;
 
     /**
@@ -77,7 +84,8 @@ class NewCommand extends Command
             ->addOption('local', null, InputOption::VALUE_NONE, 'Optionally install from local repo configured in composer config.json')
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
-            ->addOption('addon', 'p', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Install first-party addons?', [])
+            ->addOption('pro', null, InputOption::VALUE_NONE, 'Enable Statamic Pro for additional features')
+            ->addOption('ssg', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Optionally install the Static Site Generator addon', [])
             ->addOption('git', null, InputOption::VALUE_NONE, 'Initialize a Git repository')
             ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
             ->addOption('github', null, InputOption::VALUE_OPTIONAL, 'Create a new repository on GitHub', false)
@@ -120,26 +128,33 @@ class NewCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this
-            ->processArguments()
-            ->validateArguments()
-            ->askForRepo()
-            ->validateStarterKitLicense()
-            ->askToInstallAddons()
-            ->askToMakeSuperUser()
-            ->askToInitializeGitRepository()
-            ->askToPushToGithub()
-            ->askToSpreadJoy()
-            ->readySetGo()
-            ->installBaseProject()
-            ->installStarterKit()
-            ->makeSuperUser()
-            ->installAddons()
-            ->initializeGitRepository()
-            ->pushToGithub()
-            ->notifyIfOldCliVersion()
-            ->showSuccessMessage()
-            ->showPostInstallInstructions();
+        try {
+            $this
+                ->processArguments()
+                ->validateArguments()
+                ->askForRepo()
+                ->validateStarterKitLicense()
+                ->askToEnableStatamicPro()
+                ->askToInstallSsg()
+                ->askToMakeSuperUser()
+                ->askToInitializeGitRepository()
+                ->askToPushToGithub()
+                ->askToSpreadJoy()
+                ->installBaseProject()
+                ->installStarterKit()
+                ->enableStatamicPro()
+                ->makeSuperUser()
+                ->installSsg()
+                ->initializeGitRepository()
+                ->pushToGithub()
+                ->notifyIfOldCliVersion()
+                ->showSuccessMessage()
+                ->showPostInstallInstructions();
+        } catch (RuntimeException $e) {
+            $this->showError($e->getMessage());
+
+            return 1;
+        }
 
         return 0;
     }
@@ -222,9 +237,9 @@ class NewCommand extends Command
         }
 
         $this->output->write(PHP_EOL);
-        $this->output->write("<comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
-        $this->output->write('<comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
-        $this->output->write('<comment>composer global update statamic/cli</comment>'.PHP_EOL);
+        $this->output->write("  <comment>This is an old version of the Statamic CLI Tool, please upgrade to {$this->shouldUpdateCliToVersion}!</comment>".PHP_EOL);
+        $this->output->write('  <comment>If you have a global composer installation, you may upgrade by running the following command:</comment>'.PHP_EOL);
+        $this->output->write('  <comment>composer global update statamic/cli</comment>'.PHP_EOL);
 
         return $this;
     }
@@ -253,7 +268,8 @@ class NewCommand extends Command
         $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
-        $this->addons = $this->input->getOption('addon');
+        $this->pro = $this->input->getOption('pro') ?? true;
+        $this->ssg = $this->input->getOption('ssg');
         $this->force = $this->input->getOption('force');
         $this->initializeGitRepository = $this->input->getOption('git') !== false || $this->input->getOption('github') !== false;
         $this->shouldPushToGithub = $this->input->getOption('github') !== false;
@@ -310,15 +326,9 @@ class NewCommand extends Command
      */
     protected function showStatamicTitleArt()
     {
-        $this->output->write(PHP_EOL."<fg=#FF269E>              $$\                $$\                             $$\
-              $$ |               $$ |                            \__|
-  $$$$$$$\ $$$$$$\    $$$$$$\ $$$$$$\    $$$$$$\   $$$$$$\$$$$\  $$\  $$$$$$$\
-  $$  _____|\_$$  _|   \____$$\\_$$  _|   \____$$\  $$  _$$  _$$\ $$ |$$  _____|
-  \$$$$$$\     $$ |     $$$$$$$ | $$ |     $$$$$$$ |$$ / $$ / $$ |$$ |$$ /
-   \____$$\   $$ |$$\ $$  __$$ | $$ |$$\ $$  __$$ |$$ | $$ | $$ |$$ |$$ |
-  $$$$$$$  |  \\$$$$  |\\$$$$$$$ | \\$$$$  |\\$$$$$$$ |$$ | $$ | $$ |$$ |\\$$$$$$$\
-  \_______/    \____/  \_______|  \____/  \_______|\__| \__| \__|\__| \_______|
-        </>".PHP_EOL);
+        $this->output->write(PHP_EOL.'<fg=#D4FF4C>
+  █▀ ▀█▀ ▄▀█ ▀█▀ ▄▀█ █▀▄▀█ █ █▀▀
+  ▄█ ░█░ █▀█ ░█░ █▀█ █░▀░█ █ █▄▄</>'.PHP_EOL.PHP_EOL);
 
         return $this;
     }
@@ -432,7 +442,7 @@ class NewCommand extends Command
      */
     protected function confirmUnlistedKit()
     {
-        if (! confirm('Starter kit not found on Statamic Marketplace! Install unlisted starter kit?')) {
+        if (! confirm('Starter kit not found on Statamic Marketplace. Install unlisted starter kit?')) {
             return $this->exitInstallation();
         }
 
@@ -459,34 +469,6 @@ class NewCommand extends Command
 
         if (! confirm('Would you like to continue the installation?', false, 'I understand. Install now and mark used.', "No, I'll install it later.")) {
             return $this->exitInstallation();
-        }
-
-        return $this;
-    }
-
-    /**
-     * Final confirmation
-     *
-     * @return $this
-     */
-    protected function readySetGo()
-    {
-        if (! $this->input->isInteractive()) {
-            return $this;
-        }
-
-        if (! confirm('Ready?', yes: "Yes, let's do this!", no: 'No, shut it down.')) {
-            return $this->exitInstallation();
-        }
-
-        if ($this->spreadJoy) {
-            if (PHP_OS_FAMILY == 'Darwin') {
-                exec('open https://github.com/statamic/cms');
-            } elseif (PHP_OS_FAMILY == 'Windows') {
-                exec('start https://github.com/statamic/cms');
-            } elseif (PHP_OS_FAMILY == 'Linux') {
-                exec('xdg-open https://github.com/statamic/cms');
-            }
         }
 
         return $this;
@@ -581,56 +563,35 @@ class NewCommand extends Command
         return $this;
     }
 
-    protected function askToInstallAddons()
+    protected function askToInstallSsg()
     {
-        if ($this->addons || ! $this->input->isInteractive()) {
+        if ($this->ssg || ! $this->input->isInteractive()) {
             return $this;
         }
 
-        $choice = select(
-            label: 'Would you like to install any first-party addons?',
-            options: [
-                $withoutAddonsOption = "No, I'm good for now.",
-                "Yes, let me pick.",
-            ],
-        );
-
-        if ($choice === $withoutAddonsOption) {
-            return $this;
-        }
-
-        $this->addons = multiselect(
-            label: 'Which first-party addons do you want to install?',
-            options: [
-                'collaboration' => 'Collaboration',
-                'eloquent-driver' => 'Eloquent Driver',
-                'ssg' => 'Static Site Generator',
-            ],
-            hint: 'Use the space bar to select options.'
-        );
-
-        if (count($this->addons) > 0) {
-            $this->output->write("  Great. We'll get these installed right after we setup your Statamic site.".PHP_EOL.PHP_EOL);
+        if (confirm('Do you plan to generate a static site?', default: false)) {
+            $this->ssg = true;
         }
 
         return $this;
     }
 
-    protected function installAddons()
+    protected function installSsg()
     {
-        if (! $this->addons) {
+        if (! $this->ssg) {
             return $this;
         }
 
-        collect($this->addons)->each(function (string $addon) {
-            $statusCode = (new Please($this->output))
-                ->cwd($this->absolutePath)
-                ->run("install:{$addon}");
+        $this->output->write(PHP_EOL);
+        intro("Installing the Static Site Generator addon...");
 
-            if ($statusCode !== 0) {
-                throw new RuntimeException("There was a problem installing the [{$addon}] addon!");
-            }
-        });
+        $statusCode = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run("install:ssg");
+
+        if ($statusCode !== 0) {
+            throw new RuntimeException("There was a problem installing the Static Site Generator addon!");
+        }
 
         return $this;
     }
@@ -643,7 +604,8 @@ class NewCommand extends Command
 
         $this->makeUser = confirm('Create a super user?', false);
 
-        $this->output->write($this->makeUser
+        $this->output->write(
+            $this->makeUser
             ? "  Great. You'll be prompted for details after installation."
             : '  No problem. You can create one later with <comment>php please make:user</comment>.'
         );
@@ -663,6 +625,9 @@ class NewCommand extends Command
         if (! $this->makeUser) {
             return $this;
         }
+
+        $this->output->write(PHP_EOL.PHP_EOL);
+        intro("Let's create your super user account.");
 
         // Since Windows cannot TTY, we'll capture their input here and make a user.
         if (PHP_OS_FAMILY === 'Windows') {
@@ -926,6 +891,42 @@ class NewCommand extends Command
         return false;
     }
 
+    protected function askToEnableStatamicPro()
+    {
+        if ($this->input->getOption('pro') !== false || ! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $this->pro = confirm(
+            label: 'Do you want to enable Statamic Pro?',
+            default: true,
+            hint: "Statamic Pro is required for some features. Like Multi-site, the Git integration, and more."
+        );
+
+        if ($this->pro) {
+            $this->output->write("  Before your site goes live, you will need to purchase a license on <info>statamic.com</info>.".PHP_EOL.PHP_EOL);
+        }
+
+        return $this;
+    }
+
+    protected function enableStatamicPro()
+    {
+        if (! $this->pro) {
+            return $this;
+        }
+
+        $statusCode = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('pro:enable');
+
+        if ($statusCode !== 0) {
+            throw new RuntimeException('There was a problem enabling Statamic Pro!');
+        }
+
+        return $this;
+    }
+
     /**
      * Show success message.
      *
@@ -933,13 +934,11 @@ class NewCommand extends Command
      */
     protected function showSuccessMessage()
     {
-        $this->output->writeln(PHP_EOL."<info>[✔] Statamic has been successfully installed into the <comment>{$this->relativePath}</comment> directory.</info>");
-
-        if (! $this->spreadJoy) {
-            $this->output->writeln('Spread some joy and star our GitHub repo! https://github.com/statamic/cms');
-        }
-
-        $this->output->writeln('Build something rad!');
+        $this->output->writeln(PHP_EOL.'  <info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
+        $this->output->writeln('  You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
+        $this->output->writeln('  The documentation is always available at <info>statamic.dev</info> and you can ');
+        $this->output->writeLn('  join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
+        $this->output->writeLn('  Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
 
         return $this;
     }
@@ -976,14 +975,20 @@ class NewCommand extends Command
         }
 
         $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
-            $yes = "Absolutely. I'll star it while you finish installing.",
+            $yes = "Absolutely",
             $no = 'Maybe later',
         ], $no);
 
-        if ($this->spreadJoy = $response === $yes) {
-            $this->output->write('  Awesome. The browser will open when the installation begins.');
+        if ($response === $yes) {
+            if (PHP_OS_FAMILY == 'Darwin') {
+                exec('open https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Windows') {
+                exec('start https://github.com/statamic/cms');
+            } elseif (PHP_OS_FAMILY == 'Linux') {
+                exec('xdg-open https://github.com/statamic/cms');
+            }
         } else {
-            $this->output->write('  You can star the GitHub repo at any time if you change your mind.');
+            $this->output->write('  No problem. You can do it at <info>github.com/statamic/cms</info> anytime.');
         }
 
         $this->output->write(PHP_EOL.PHP_EOL);
@@ -1127,22 +1132,6 @@ class NewCommand extends Command
         return text('Please enter your license key', required: true);
     }
 
-    /**
-     * Exit installation.
-     *
-     * @return \stdClass
-     */
-    protected function exitInstallation()
-    {
-        return new class
-        {
-            public function __call($method, $args)
-            {
-                return $this;
-            }
-        };
-    }
-
     private function searchStarterKits($value)
     {
         $kits = $this->getStarterKits();
@@ -1182,5 +1171,20 @@ class NewCommand extends Command
         }
 
         return array_search($kit, $this->getStarterKits());
+    }
+
+    private function showError(string $message): void
+    {
+        $whitespace = '';
+
+        for ($i = 0; $i < strlen($message); $i++) {
+            $whitespace .= ' ';
+        }
+
+        $this->output->write(PHP_EOL);
+        $this->output->write("  <bg=red>  {$whitespace}  </>".PHP_EOL);
+        $this->output->write("  <bg=red>  {$message}  </>".PHP_EOL);
+        $this->output->write("  <bg=red>  {$whitespace}  </>".PHP_EOL);
+        $this->output->write(PHP_EOL);
     }
 }
