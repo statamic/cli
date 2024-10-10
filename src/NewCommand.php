@@ -32,7 +32,7 @@ use function Laravel\Prompts\text;
 
 class NewCommand extends Command
 {
-    use Concerns\ConfiguresPrompts, Concerns\RunsCommands;
+    use Concerns\ConfiguresDatabase, Concerns\ConfiguresPrompts, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -55,6 +55,7 @@ class NewCommand extends Command
     public $local;
     public $withConfig;
     public $withoutDependencies;
+    public $shouldConfigureDatabase = false;
     public $ssg;
     public $force;
     public $baseInstallSuccessful;
@@ -133,6 +134,7 @@ class NewCommand extends Command
                 ->validateArguments()
                 ->askForRepo()
                 ->validateStarterKitLicense()
+                ->askToInstallEloquentDriver()
                 ->askToEnableStatamicPro()
                 ->askToInstallSsg()
                 ->askToMakeSuperUser()
@@ -143,6 +145,8 @@ class NewCommand extends Command
                 ->installStarterKit()
                 ->enableStatamicPro()
                 ->makeSuperUser()
+                ->configureDatabaseConnection()
+                ->installEloquentDriver()
                 ->installSsg()
                 ->initializeGitRepository()
                 ->pushToGithub()
@@ -505,7 +509,11 @@ class NewCommand extends Command
             throw new RuntimeException('There was a problem installing Statamic!');
         }
 
-        $this->updateEnvVars();
+        $this->replaceInFile(
+            'APP_URL=http://localhost',
+            'APP_URL=http://'.$this->name.'.test',
+            $this->absolutePath.'/.env'
+        );
 
         $this->baseInstallSuccessful = true;
 
@@ -558,6 +566,97 @@ class NewCommand extends Command
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem installing Statamic with the chosen starter kit!');
         }
+
+        return $this;
+    }
+
+    protected function askToInstallEloquentDriver()
+    {
+        if (! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        $choice = select(
+            label: 'Where do you want to store your content and data?',
+            options: [
+                'flat-file' => 'Flat Files',
+                'database' => 'Database',
+            ],
+            default : 'flat-file',
+            hint: 'When in doubt, choose Flat Files. You can always change this later.'
+        );
+
+        $this->shouldConfigureDatabase = $choice === 'database';
+
+        return $this;
+    }
+
+    protected function configureDatabaseConnection()
+    {
+        if (! $this->shouldConfigureDatabase) {
+            return $this;
+        }
+
+        $database = $this->promptForDatabaseOptions();
+
+        $this->configureDefaultDatabaseConnection($database, $this->name);
+
+        if ($database === 'sqlite') {
+            touch($this->absolutePath.'/database/database.sqlite');
+        }
+
+        $command = ['migrate'];
+
+        if (! $this->input->isInteractive()) {
+            $command[] = '--no-interaction';
+        }
+
+        $migrate = (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run(...$command);
+
+        // When there's an issue running the migrations, it's likely because of connection issues.
+        // Let's let the user know and continue with the install process.
+        if ($migrate !== 0) {
+            $this->shouldConfigureDatabase = false;
+
+            $this->output->write('  <bg=red;options=bold> There was a problem connecting to the database. </>'.PHP_EOL);
+            $this->output->write(PHP_EOL);
+            $this->output->write('  Once the install process is complete, please run <info>php please install:eloquent-driver</info> to finish setting up the database.'.PHP_EOL);
+        }
+
+        return $this;
+    }
+
+    protected function installEloquentDriver()
+    {
+        if (! $this->shouldConfigureDatabase) {
+            return $this;
+        }
+
+        $options = [
+            '--import',
+            '--without-messages',
+        ];
+
+        $whichRepositories = select(
+            label: 'Do you want to store everything in the database, or just some things?',
+            options: [
+                'everything' => 'Everything',
+                'custom' => 'Let me choose',
+            ],
+            default: 'everything'
+        );
+
+        if ($whichRepositories === 'everything') {
+            $options[] = '--all';
+        }
+
+        (new Please($this->output))
+            ->cwd($this->absolutePath)
+            ->run('install:eloquent-driver', ...$options);
+
+        $this->output->write('  <info>[✔] Database setup complete!</info>', PHP_EOL);
 
         return $this;
     }
@@ -1075,31 +1174,24 @@ class NewCommand extends Command
     }
 
     /**
-     * Update application env vars.
-     */
-    protected function updateEnvVars()
-    {
-        $this->replaceInFile(
-            'APP_URL=http://localhost',
-            'APP_URL=http://'.$this->name.'.test',
-            $this->absolutePath.'/.env'
-        );
-
-        $this->replaceInFile(
-            'DB_DATABASE=laravel',
-            'DB_DATABASE='.str_replace('-', '_', strtolower($this->name)),
-            $this->absolutePath.'/.env'
-        );
-    }
-
-    /**
      * Replace the given string in the given file.
      */
-    protected function replaceInFile(string $search, string $replace, string $file)
+    protected function replaceInFile(string|array $search, string|array $replace, string $file): void
     {
         file_put_contents(
             $file,
             str_replace($search, $replace, file_get_contents($file))
+        );
+    }
+
+    /**
+     * Replace the given string in the given file using regular expressions.
+     */
+    protected function pregReplaceInFile(string $pattern, string $replace, string $file): void
+    {
+        file_put_contents(
+            $file,
+            preg_replace($pattern, $replace, file_get_contents($file))
         );
     }
 
