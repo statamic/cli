@@ -65,7 +65,6 @@ class NewCommand extends Command
     public $githubRepository;
     public $repositoryVisibility;
     public $pro = true;
-    public $spreadJoy = false;
 
     /**
      * Configure the command options.
