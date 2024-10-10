@@ -611,7 +611,7 @@ class NewCommand extends Command
             $command[] = '--no-interaction';
         }
 
-        $migrate = (new Artisan($this->output))
+        $migrate = (new Please($this->output))
             ->cwd($this->absolutePath)
             ->run(...$command);
 
