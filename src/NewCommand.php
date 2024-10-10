@@ -20,6 +20,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Process\Process;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
@@ -43,7 +44,7 @@ class NewCommand extends Command
 
     /** @var OutputInterface */
     public $output;
-    
+
     public $relativePath;
     public $absolutePath;
     public $name;
@@ -59,6 +60,10 @@ class NewCommand extends Command
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
     public $makeUser = false;
+    public $initializeGitRepository = false;
+    public $shouldPushToGithub = false;
+    public $githubRepository;
+    public $repositoryVisibility;
     public $pro = true;
 
     /**
@@ -80,6 +85,10 @@ class NewCommand extends Command
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
             ->addOption('pro', null, InputOption::VALUE_NONE, 'Enable Statamic Pro for additional features')
             ->addOption('ssg', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Optionally install the Static Site Generator addon', [])
+            ->addOption('git', null, InputOption::VALUE_NONE, 'Initialize a Git repository')
+            ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
+            ->addOption('github', null, InputOption::VALUE_OPTIONAL, 'Create a new repository on GitHub', false)
+            ->addOption('repo', null, InputOption::VALUE_REQUIRED, 'Optionally specify the name of the GitHub repository')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
     }
 
@@ -127,12 +136,16 @@ class NewCommand extends Command
                 ->askToEnableStatamicPro()
                 ->askToInstallSsg()
                 ->askToMakeSuperUser()
+                ->askToInitializeGitRepository()
+                ->askToPushToGithub()
                 ->askToSpreadJoy()
                 ->installBaseProject()
                 ->installStarterKit()
                 ->enableStatamicPro()
                 ->makeSuperUser()
                 ->installSsg()
+                ->initializeGitRepository()
+                ->pushToGithub()
                 ->notifyIfOldCliVersion()
                 ->showSuccessMessage()
                 ->showPostInstallInstructions();
@@ -257,6 +270,10 @@ class NewCommand extends Command
         $this->pro = $this->input->getOption('pro') ?? true;
         $this->ssg = $this->input->getOption('ssg');
         $this->force = $this->input->getOption('force');
+        $this->initializeGitRepository = $this->input->getOption('git') !== false || $this->input->getOption('github') !== false;
+        $this->shouldPushToGithub = $this->input->getOption('github') !== false;
+        $this->githubRepository = $this->input->getOption('repo');
+        $this->repositoryVisibility = $this->input->getOption('github');
 
         return $this;
     }
@@ -662,6 +679,165 @@ class NewCommand extends Command
         $please->run('tinker', '--execute', $updateUser);
 
         return $this;
+    }
+
+    /**
+     * Ask to initialize a Git repository.
+     *
+     * @return $this
+     */
+    protected function askToInitializeGitRepository()
+    {
+        if (
+            $this->initializeGitRepository
+            || ! $this->isGitInstalled()
+            || ! $this->input->isInteractive()
+        ) {
+            return $this;
+        }
+
+        $this->initializeGitRepository = confirm(
+            label: 'Would you like to initialize a Git repository?',
+            default: false
+        );
+
+        return $this;
+    }
+
+    /**
+     * Initialize a Git repository.
+     *
+     * @return $this
+     */
+    protected function initializeGitRepository()
+    {
+        if (! $this->initializeGitRepository || ! $this->isGitInstalled()) {
+            return $this;
+        }
+
+        $branch = $this->input->getOption('branch') ?: $this->defaultBranch();
+
+        $commands = [
+            'git init -q',
+            'git add .',
+            'git commit -q -m "Set up a fresh Statamic site"',
+            "git branch -M {$branch}",
+        ];
+
+        $this->runCommands($commands, workingPath: $this->absolutePath);
+
+        return $this;
+    }
+
+    /**
+     * Check if Git is installed.
+     *
+     * @return bool
+     */
+    protected function isGitInstalled(): bool
+    {
+        $process = new Process(['git', '--version']);
+
+        $process->run();
+
+        return $process->isSuccessful();
+    }
+
+    /**
+     * Return the local machine's default Git branch if set or default to `main`.
+     *
+     * @return string
+     */
+    protected function defaultBranch(): string
+    {
+        $process = new Process(['git', 'config', '--global', 'init.defaultBranch']);
+        $process->run();
+
+        $output = trim($process->getOutput());
+
+        return $process->isSuccessful() && $output ? $output : 'main';
+    }
+
+    /**
+     * Ask if the user wants to push the repository to GitHub.
+     *
+     * @return $this
+     */
+    protected function askToPushToGithub()
+    {
+        if (
+            ! $this->initializeGitRepository
+            || ! $this->isGitInstalled()
+            || ! $this->isGhInstalled()
+            || ! $this->input->isInteractive()
+        ) {
+            return $this;
+        }
+
+        if (! $this->shouldPushToGithub) {
+            $this->shouldPushToGithub = confirm(
+                label: 'Would you like to create a new repository on GitHub?',
+                default: false
+            );
+
+            if ($this->shouldPushToGithub && ! $this->githubRepository) {
+                $this->githubRepository = text(
+                    label: 'What should be your full repository name?',
+                    default: $this->name,
+                    required: true,
+                );
+            }
+
+            if ($this->shouldPushToGithub && ! $this->repositoryVisibility) {
+                $this->repositoryVisibility = select(
+                    label: 'Should the repository be public or private?',
+                    options: [
+                        'public' => 'Public',
+                        'private' => 'Private',
+                    ],
+                    default: 'private',
+                );
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Create a GitHub repository and push the git log to it.
+     *
+     * @return $this
+     */
+    protected function pushToGithub()
+    {
+        if (! $this->shouldPushToGithub) {
+            return $this;
+        }
+
+        $name = $this->githubRepository ?? $this->name;
+        $visibility = $this->repositoryVisibility ?? 'private';
+
+        $commands = [
+            "gh repo create {$name} --source=. --push --{$visibility}",
+        ];
+
+        $this->runCommands($commands, $this->absolutePath, disableOutput: true);
+
+        return $this;
+    }
+
+    /**
+     * Check if GitHub's GH CLI tool is installed.
+     *
+     * @return bool
+     */
+    protected function isGhInstalled(): bool
+    {
+        $process = new Process(['gh', 'auth', 'status']);
+
+        $process->run();
+
+        return $process->isSuccessful();
     }
 
     /**
