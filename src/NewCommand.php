@@ -883,6 +883,7 @@ class NewCommand extends Command
                 $this->githubRepository = text(
                     label: 'What should be your full repository name?',
                     default: $this->name,
+                    hint: "Use `organization/$this->name` to create an organization repo.",
                     required: true,
                 );
             }
