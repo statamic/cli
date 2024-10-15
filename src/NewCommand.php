@@ -30,8 +30,7 @@ use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
 use function Laravel\Prompts\text;
 
-class NewCommand extends Command
-{
+class NewCommand extends Command {
     use Concerns\ConfiguresDatabase, Concerns\ConfiguresPrompts, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
