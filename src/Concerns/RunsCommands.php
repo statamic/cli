@@ -9,12 +9,9 @@ trait RunsCommands
     /**
      * Run the given command.
      *
-     * @param string $command
-     * @param string|null $workingPath
-     * @param bool $disableOutput
      * @return Process
      */
-    protected function runCommand(string $command, string $workingPath = null, bool $disableOutput = false)
+    protected function runCommand(string $command, ?string $workingPath = null, bool $disableOutput = false)
     {
         return $this->runCommands([$command], $workingPath, $disableOutput);
     }
@@ -22,12 +19,9 @@ trait RunsCommands
     /**
      * Run the given commands.
      *
-     * @param array $commands
-     * @param string|null $workingPath
-     * @param bool $disableOutput
      * @return Process
      */
-    protected function runCommands(array $commands, string $workingPath = null, bool $disableOutput = false)
+    protected function runCommands(array $commands, ?string $workingPath = null, bool $disableOutput = false)
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {

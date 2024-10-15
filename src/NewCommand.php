@@ -23,14 +23,13 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 
 use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\error;
 use function Laravel\Prompts\intro;
-use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
 use function Laravel\Prompts\text;
 
-class NewCommand extends Command {
+class NewCommand extends Command
+{
     use Concerns\ConfiguresDatabase, Concerns\ConfiguresPrompts, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
@@ -680,14 +679,14 @@ class NewCommand extends Command {
         }
 
         $this->output->write(PHP_EOL);
-        intro("Installing the Static Site Generator addon...");
+        intro('Installing the Static Site Generator addon...');
 
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run("install:ssg");
+            ->run('install:ssg');
 
         if ($statusCode !== 0) {
-            throw new RuntimeException("There was a problem installing the Static Site Generator addon!");
+            throw new RuntimeException('There was a problem installing the Static Site Generator addon!');
         }
 
         return $this;
@@ -829,8 +828,6 @@ class NewCommand extends Command {
 
     /**
      * Check if Git is installed.
-     *
-     * @return bool
      */
     protected function isGitInstalled(): bool
     {
@@ -843,8 +840,6 @@ class NewCommand extends Command {
 
     /**
      * Return the local machine's default Git branch if set or default to `main`.
-     *
-     * @return string
      */
     protected function defaultBranch(): string
     {
@@ -926,8 +921,6 @@ class NewCommand extends Command {
 
     /**
      * Check if GitHub's GH CLI tool is installed.
-     *
-     * @return bool
      */
     protected function isGhInstalled(): bool
     {
@@ -997,11 +990,11 @@ class NewCommand extends Command {
         $this->pro = confirm(
             label: 'Do you want to enable Statamic Pro?',
             default: true,
-            hint: "Statamic Pro is required for some features. Like Multi-site, the Git integration, and more."
+            hint: 'Statamic Pro is required for some features. Like Multi-site, the Git integration, and more.'
         );
 
         if ($this->pro) {
-            $this->output->write("  Before your site goes live, you will need to purchase a license on <info>statamic.com</info>.".PHP_EOL.PHP_EOL);
+            $this->output->write('  Before your site goes live, you will need to purchase a license on <info>statamic.com</info>.'.PHP_EOL.PHP_EOL);
         }
 
         return $this;
@@ -1072,7 +1065,7 @@ class NewCommand extends Command {
         }
 
         $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
-            $yes = "Absolutely",
+            $yes = 'Absolutely',
             $no = 'Maybe later',
         ], $no);
 
