@@ -351,6 +351,7 @@ class NewCommand extends Command
                 $blankSiteOption = 'No, start with a blank site.',
                 'Yes, let me pick a Starter Kit.',
             ],
+            default: $blankSiteOption
         );
 
         if ($choice === $blankSiteOption) {
