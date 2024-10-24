@@ -51,7 +51,7 @@ trait RunsCommands
             }, $commands);
         }
 
-        $process = Process::fromShellCommandline(implode(' && ', $commands), $workingPath);
+        $process = Process::fromShellCommandline(implode(' && ', $commands), $workingPath, timeout: null);
 
         if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
             try {
