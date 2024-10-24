@@ -740,7 +740,7 @@ class NewCommand extends Command
         }
 
         // Since Windows cannot TTY, we'll capture their input here and make a user.
-        if ($this->input->isInteractive() && PHP_OS_FAMILY === 'Windows') {
+        if ($this->input->isInteractive() && ! $email && PHP_OS_FAMILY === 'Windows') {
             return $this->makeSuperUserInWindows();
         }
 
