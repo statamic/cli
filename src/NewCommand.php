@@ -88,7 +88,9 @@ class NewCommand extends Command
             ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
             ->addOption('github', null, InputOption::VALUE_OPTIONAL, 'Create a new repository on GitHub', false)
             ->addOption('repo', null, InputOption::VALUE_REQUIRED, 'Optionally specify the name of the GitHub repository')
-            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists');
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists')
+            ->addOption('email', null, InputOption::VALUE_OPTIONAL, 'Creates a super user with this email address')
+            ->addOption('password', null, InputOption::VALUE_OPTIONAL, 'Password for the super user');
     }
 
     protected function initialize(InputInterface $input, OutputInterface $output)
@@ -694,6 +696,12 @@ class NewCommand extends Command
 
     protected function askToMakeSuperUser()
     {
+        if ($this->input->getOption('email')) {
+            $this->makeUser = true;
+
+            return $this;
+        }
+
         if (! $this->input->isInteractive()) {
             return $this;
         }
@@ -722,18 +730,35 @@ class NewCommand extends Command
             return $this;
         }
 
-        $this->output->write(PHP_EOL.PHP_EOL);
-        intro("Let's create your super user account.");
+        $email = $this->input->getOption('email');
+        $password = $this->input->getOption('password') ?? 'password';
+
+        if (! $email) {
+            $this->output->write(PHP_EOL.PHP_EOL);
+            intro("Let's create your super user account.");
+        }
 
         // Since Windows cannot TTY, we'll capture their input here and make a user.
-        if (PHP_OS_FAMILY === 'Windows') {
+        if ($this->input->isInteractive() && PHP_OS_FAMILY === 'Windows') {
             return $this->makeSuperUserInWindows();
         }
 
-        // Otherwise, delegate to the `make:user` command with interactivity and let core handle the finer details.
+        $command = ['make:user'];
+
+        if ($email) {
+            $command = [...$command, $email, '--password='.$password];
+        }
+
+        $command[] = '--super';
+
+        if (! $this->input->isInteractive()) {
+            $command[] = '--no-interaction';
+        }
+
+        // Otherwise, delegate to the `make:user` command and let core handle the finer details.
         (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run('make:user', '--super');
+            ->run(...$command);
 
         return $this;
     }
@@ -752,28 +777,13 @@ class NewCommand extends Command
             $email = $this->askForBasicInput('Email');
         }
 
-        // Ask for name
-        $name = $this->askForBasicInput('Name');
-
         // Ask for password
         while (! isset($password) || ! $this->validatePassword($password)) {
             $password = $this->askForBasicInput('Password (Your input will be hidden)', true);
         }
 
         // Create super user and update with captured input.
-        $please->run('make:user', '--super', $email);
-
-        $updateUser = '\Statamic\Facades\User::findByEmail('.escapeshellarg($email).')'
-            .'->password('.escapeshellarg($password).')'
-            .'->makeSuper()';
-
-        if ($name) {
-            $updateUser .= '->set("name", '.escapeshellarg($name).')';
-        }
-
-        $updateUser .= '->save();';
-
-        $please->run('tinker', '--execute', $updateUser);
+        $please->run('make:user', $email, '--password='.$password, '--super');
 
         return $this;
     }
