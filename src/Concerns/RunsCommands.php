@@ -25,7 +25,7 @@ trait RunsCommands
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
-                if (str_starts_with($value, 'chmod') || str_starts_with($value, 'rm ')) {
+                if (str_starts_with($value, 'chmod')) {
                     return $value;
                 }
 
@@ -39,7 +39,7 @@ trait RunsCommands
 
         if ($this->input->getOption('quiet')) {
             $commands = array_map(function ($value) {
-                if (str_starts_with($value, 'chmod') || str_starts_with($value, 'rm ')) {
+                if (str_starts_with($value, 'chmod')) {
                     return $value;
                 }
 
