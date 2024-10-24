@@ -1,7 +1,5 @@
 # Statamic CLI Tool
 
-![Statamic 3.0+](https://img.shields.io/badge/Statamic-3.0+-FF269E?style=for-the-badge&link=https://statamic.com)
-
 🌴 Install and manage your **Statamic** projects from the command line.
 
 - [Installing the CLI tool](#installing-the-cli-tool)

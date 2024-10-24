@@ -9,27 +9,27 @@ trait RunsCommands
     /**
      * Run the given command.
      *
-     * @param  string  $command
-     * @param  bool  $disableOutput
      * @return Process
      */
-    protected function runCommand($command, $disableOutput = false)
+    protected function runCommand(string $command, ?string $workingPath = null, bool $disableOutput = false)
     {
-        return $this->runCommands([$command], $disableOutput);
+        return $this->runCommands([$command], $workingPath, $disableOutput);
     }
 
     /**
      * Run the given commands.
      *
-     * @param  array  $commands
-     * @param  bool  $disableOutput
      * @return Process
      */
-    protected function runCommands($commands, $disableOutput = false)
+    protected function runCommands(array $commands, ?string $workingPath = null, bool $disableOutput = false)
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
-                if (substr($value, 0, 5) === 'chmod' || substr($value, 0, 3) === 'rm ') {
+                if (str_starts_with($value, 'chmod') || str_starts_with($value, 'rm ')) {
+                    return $value;
+                }
+
+                if (str_starts_with($value, 'git')) {
                     return $value;
                 }
 
@@ -39,7 +39,11 @@ trait RunsCommands
 
         if ($this->input->getOption('quiet')) {
             $commands = array_map(function ($value) {
-                if (substr($value, 0, 5) === 'chmod' || substr($value, 0, 3) === 'rm ') {
+                if (str_starts_with($value, 'chmod') || str_starts_with($value, 'rm ')) {
+                    return $value;
+                }
+
+                if (str_starts_with($value, 'git')) {
                     return $value;
                 }
 
@@ -47,7 +51,7 @@ trait RunsCommands
             }, $commands);
         }
 
-        $process = Process::fromShellCommandline(implode(' && ', $commands), null, null, null, null);
+        $process = Process::fromShellCommandline(implode(' && ', $commands), $workingPath, timeout: null);
 
         if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
             try {
@@ -57,7 +61,7 @@ trait RunsCommands
                     $process->setTty(true);
                 }
             } catch (RuntimeException $e) {
-                $this->output->writeln('Warning: '.$e->getMessage());
+                $this->output->writeln('  <bg=yellow;fg=black> WARN </> '.$e->getMessage().PHP_EOL);
             }
         }
 
@@ -65,7 +69,7 @@ trait RunsCommands
             $process->disableOutput()->run();
         } else {
             $process->run(function ($type, $line) {
-                $this->output->write($line);
+                $this->output->write('    '.$line);
             });
         }
 
