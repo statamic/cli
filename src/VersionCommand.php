@@ -22,8 +22,6 @@ class VersionCommand extends Command
 
     /**
      * Execute the command.
-     *
-     * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
