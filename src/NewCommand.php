@@ -55,6 +55,7 @@ class NewCommand extends Command
     public $withoutDependencies;
     public $shouldConfigureDatabase = false;
     public $ssg;
+    public $importer;
     public $force;
     public $baseInstallSuccessful;
     public $shouldUpdateCliToVersion = false;
@@ -83,7 +84,8 @@ class NewCommand extends Command
             ->addOption('with-config', null, InputOption::VALUE_NONE, 'Optionally copy starter-kit.yaml config for local development')
             ->addOption('without-dependencies', null, InputOption::VALUE_NONE, 'Optionally install starter kit without dependencies')
             ->addOption('pro', null, InputOption::VALUE_NONE, 'Enable Statamic Pro for additional features')
-            ->addOption('ssg', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Optionally install the Static Site Generator addon', [])
+            ->addOption('ssg', null, InputOption::VALUE_OPTIONAL, 'Optionally install the Static Site Generator addon', false)
+            ->addOption('importer', null, InputOption::VALUE_OPTIONAL, 'Optionally install the Importer addon', false)
             ->addOption('git', null, InputOption::VALUE_NONE, 'Initialize a Git repository')
             ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch that should be created for a new repository')
             ->addOption('github', null, InputOption::VALUE_OPTIONAL, 'Create a new repository on GitHub', false)
@@ -135,6 +137,7 @@ class NewCommand extends Command
                 ->askToInstallEloquentDriver()
                 ->askToEnableStatamicPro()
                 ->askToInstallSsg()
+                ->askToInstallImporter()
                 ->askToMakeSuperUser()
                 ->askToInitializeGitRepository()
                 ->askToPushToGithub()
@@ -146,6 +149,7 @@ class NewCommand extends Command
                 ->configureDatabaseConnection()
                 ->installEloquentDriver()
                 ->installSsg()
+                ->installImporter()
                 ->initializeGitRepository()
                 ->pushToGithub()
                 ->notifyIfOldCliVersion()
@@ -269,8 +273,9 @@ class NewCommand extends Command
         $this->local = $this->input->getOption('local');
         $this->withConfig = $this->input->getOption('with-config');
         $this->withoutDependencies = $this->input->getOption('without-dependencies');
-        $this->pro = $this->input->getOption('pro') ?? true;
-        $this->ssg = $this->input->getOption('ssg');
+        $this->pro = $this->input->getOption('pro') !== false;
+        $this->ssg = $this->input->getOption('ssg') !== false;
+        $this->importer = $this->input->getOption('importer') !== false;
         $this->force = $this->input->getOption('force');
         $this->initializeGitRepository = $this->input->getOption('git') !== false || $this->input->getOption('github') !== false;
         $this->shouldPushToGithub = $this->input->getOption('github') !== false;
@@ -689,6 +694,33 @@ class NewCommand extends Command
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem installing the Static Site Generator addon!');
         }
+
+        return $this;
+    }
+
+    protected function askToInstallImporter()
+    {
+        if ($this->importer || ! $this->input->isInteractive()) {
+            return $this;
+        }
+
+        if (confirm('Do you want to install the importer?', default: false)) {
+            $this->importer = true;
+        }
+
+        return $this;
+    }
+
+    protected function installImporter()
+    {
+        if (! $this->importer) {
+            return $this;
+        }
+
+        $this->output->write(PHP_EOL);
+        intro('Installing the Importer addon...');
+
+        $this->runCommand("{$this->findComposer()} require statamic/importer", workingPath: $this->absolutePath);
 
         return $this;
     }
