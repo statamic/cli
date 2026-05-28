@@ -8,7 +8,7 @@ use Symfony\Component\Process\Process;
 
 class Artisan
 {
-    protected $output;
+    protected $output; // test
     protected $cwd;
 
     /**
