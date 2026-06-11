@@ -90,7 +90,8 @@ class NewCommand extends Command
             ->addOption('repo', null, InputOption::VALUE_REQUIRED, 'Optionally specify the name of the GitHub repository')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force install even if the directory already exists')
             ->addOption('email', null, InputOption::VALUE_OPTIONAL, 'Creates a super user with this email address')
-            ->addOption('password', null, InputOption::VALUE_OPTIONAL, 'Password for the super user');
+            ->addOption('password', null, InputOption::VALUE_OPTIONAL, 'Password for the super user')
+            ->addOption('disable-title', null, InputOption::VALUE_NONE, "Don't show title art");
     }
 
     protected function initialize(InputInterface $input, OutputInterface $output)
@@ -327,6 +328,10 @@ class NewCommand extends Command
      */
     protected function showStatamicTitleArt()
     {
+        if ($this->input->hasOption('disable-title')) {
+            return $this;
+        }
+
         $this->output->write(PHP_EOL.'<fg=#D4FF4C>
   █▀ ▀█▀ ▄▀█ ▀█▀ ▄▀█ █▀▄▀█ █ █▀▀
   ▄█ ░█░ █▀█ ░█░ █▀█ █░▀░█ █ █▄▄</>'.PHP_EOL.PHP_EOL);
