@@ -1018,7 +1018,7 @@ class NewCommand extends Command
 
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run('pro:enable');
+            ->run('pro:enable', $this->input->isInteractive() ? '' : '--no-interaction');
 
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem enabling Statamic Pro!');
