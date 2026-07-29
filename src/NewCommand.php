@@ -1016,9 +1016,15 @@ class NewCommand extends Command
             return $this;
         }
 
+        $command = ['pro:enable'];
+
+        if (! $this->input->isInteractive()) {
+            $command[] = '--no-interaction';
+        }
+
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run('pro:enable', $this->input->isInteractive() ? '' : '--no-interaction');
+            ->run(...$command);
 
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem enabling Statamic Pro!');
