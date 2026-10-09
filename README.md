@@ -10,6 +10,8 @@
     - [Installing Statamic](#installing-statamic)
     - [Checking Statamic versions](#checking-statamic-versions)
     - [Updating Statamic](#updating-statamic)
+- [Troubleshooting](#troubleshooting)
+    - [Composer version conflicts](#composer-version-conflicts)
 
 ## Installing the CLI tool
 
@@ -119,3 +121,14 @@ statamic update
 ```
 
 This is just syntactic sugar for the `composer update statamic/cms --with-dependencies` command.
+
+## Troubleshooting
+
+### Composer version conflicts
+
+If you installed the CLI tool [directly](#installing-directly), it shares Composer's global dependencies with every
+other globally required package. When those packages need different versions of the same dependency, Composer may fail
+to install or update the CLI tool.
+
+The easiest fix is to remove the global install (`composer global remove statamic/cli`) and
+[use cpx](#installing-the-cli-tool) instead, which runs the CLI tool in isolation.
