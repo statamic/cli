@@ -2,7 +2,12 @@
 
 namespace Statamic\Cli\Concerns;
 
+use Laravel\Prompts\Support\Logger;
+use Laravel\Prompts\Task;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
+
+use function Laravel\Prompts\task;
 
 trait RunsCommands
 {
@@ -11,9 +16,9 @@ trait RunsCommands
      *
      * @return Process
      */
-    protected function runCommand(string $command, ?string $workingPath = null, bool $disableOutput = false)
+    protected function runCommand(string $command, ?string $workingPath = null, bool $disableOutput = false, ?string $taskLabel = null)
     {
-        return $this->runCommands([$command], $workingPath, $disableOutput);
+        return $this->runCommands([$command], $workingPath, $disableOutput, $taskLabel);
     }
 
     /**
@@ -21,7 +26,7 @@ trait RunsCommands
      *
      * @return Process
      */
-    protected function runCommands(array $commands, ?string $workingPath = null, bool $disableOutput = false)
+    protected function runCommands(array $commands, ?string $workingPath = null, bool $disableOutput = false, ?string $taskLabel = null)
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
@@ -53,6 +58,10 @@ trait RunsCommands
 
         $process = Process::fromShellCommandline(implode(' && ', $commands), $workingPath, timeout: null);
 
+        if ($taskLabel && ! $disableOutput && $this->shouldRunAsTask()) {
+            return $this->runProcessAsTask($process, $taskLabel);
+        }
+
         if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
             try {
                 if ($this->input->hasOption('no-interaction') && $this->input->getOption('no-interaction')) {
@@ -71,6 +80,46 @@ trait RunsCommands
             $process->run(function ($type, $line) {
                 $this->output->write('    '.$line);
             });
+        }
+
+        return $process;
+    }
+
+    /**
+     * Determine if the process should be rendered as a collapsible Prompts task.
+     */
+    private function shouldRunAsTask(): bool
+    {
+        return $this->output->getVerbosity() === OutputInterface::VERBOSITY_NORMAL
+            && $this->output->isDecorated()
+            && property_exists(Task::class, 'keepSummary')
+            && function_exists('pcntl_fork');
+    }
+
+    /**
+     * Run the given process within a Laravel Prompts task, streaming its output into the task's log.
+     */
+    private function runProcessAsTask(Process $process, string $taskLabel): Process
+    {
+        $output = '';
+
+        task(
+            label: $taskLabel,
+            keepSummary: true,
+            callback: function (Logger $logger) use ($process, &$output) {
+                $process->run(function ($type, $line) use ($logger, &$output) {
+                    $output .= $line;
+                    $logger->line($line);
+                });
+
+                if (! $process->isSuccessful()) {
+                    $logger->error("Failed with exit code {$process->getExitCode()}");
+                }
+            },
+        );
+
+        if (! $process->isSuccessful()) {
+            $this->output->write(PHP_EOL.preg_replace('/^/m', '    ', $output));
         }
 
         return $process;
