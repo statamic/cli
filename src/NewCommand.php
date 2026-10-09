@@ -68,6 +68,7 @@ class NewCommand extends Command
     public $githubRepository;
     public $repositoryVisibility;
     public $pro = true;
+    public $statamicLicenseKey;
 
     /**
      * Configure the command options.
@@ -1004,17 +1005,28 @@ class NewCommand extends Command
 
     protected function askToEnableStatamicPro()
     {
-        if ($this->input->getOption('pro') !== false || ! $this->input->isInteractive()) {
+        if (! $this->input->isInteractive()) {
             return $this;
         }
 
-        $this->pro = confirm(
-            label: 'Do you want to enable Statamic Pro?',
-            default: true,
-            hint: 'Statamic Pro is required for some features. Like Multi-site, the Git integration, and more.'
-        );
+        if (! $this->input->getOption('pro')) {
+            $this->pro = confirm(
+                label: 'Do you want to enable Statamic Pro?',
+                default: true,
+                hint: 'Statamic Pro is required for some features. Like Multi-site, the Git integration, and more.'
+            );
+        }
 
-        if ($this->pro) {
+        if (! $this->pro) {
+            return $this;
+        }
+
+        $this->statamicLicenseKey = trim(text(
+            label: 'If you have a Statamic license key, paste it now',
+            hint: 'Leave blank to add later.',
+        ));
+
+        if (! $this->statamicLicenseKey) {
             $this->output->write('  Before your site goes live, you will need to purchase a license on <info>statamic.com</info>.'.PHP_EOL.PHP_EOL);
         }
 
@@ -1027,21 +1039,32 @@ class NewCommand extends Command
             return $this;
         }
 
-        $command = ['pro:enable'];
-
-        if (! $this->input->isInteractive()) {
-            $command[] = '--no-interaction';
-        }
-
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run(...$command);
+            ->run('pro:enable', '--no-interaction');
 
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem enabling Statamic Pro!');
         }
 
+        if ($this->statamicLicenseKey) {
+            $this->writeStatamicLicenseKeyToEnv();
+        }
+
         return $this;
+    }
+
+    protected function writeStatamicLicenseKeyToEnv()
+    {
+        $envPath = $this->absolutePath.'/.env';
+        $contents = file_get_contents($envPath);
+        $line = 'STATAMIC_LICENSE_KEY='.$this->statamicLicenseKey;
+
+        $contents = preg_match('/^#?\s*STATAMIC_LICENSE_KEY=/m', $contents)
+            ? preg_replace_callback('/^#?\s*STATAMIC_LICENSE_KEY=.*$/m', fn () => $line, $contents)
+            : rtrim($contents, PHP_EOL).PHP_EOL.$line.PHP_EOL;
+
+        file_put_contents($envPath, $contents);
     }
 
     /**
