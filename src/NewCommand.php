@@ -1124,14 +1124,23 @@ class NewCommand extends Command
      */
     protected function askToSpreadJoy()
     {
-        if (! $this->input->isInteractive()) {
+        if (! $this->input->isInteractive() || Config::get('starred')) {
             return $this;
         }
 
         $response = select('Would you like to spread the joy of Statamic by starring the repo?', [
             $yes = 'Absolutely',
             $no = 'Maybe later',
+            $already = "I've already starred it",
         ], $no);
+
+        if ($response === $already) {
+            Config::set('starred', true);
+
+            $this->output->write("  Thank you! We almost definitely won't ask you next time.".PHP_EOL.PHP_EOL);
+
+            return $this;
+        }
 
         if ($response === $yes) {
             if (PHP_OS_FAMILY == 'Darwin') {
