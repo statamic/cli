@@ -14,9 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests:
+  php-tests:
     name: PHP ${{ matrix.php }} - ${{ matrix.stability }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     strategy:
       fail-fast: false
@@ -44,3 +46,15 @@ jobs:
 
       - name: Run tests
         run: vendor/bin/phpunit
+
+  php-tests-result:
+    name: PHP tests
+    runs-on: ubuntu-latest
+    needs: [php-tests]
+    if: always()
+    permissions: {}
+
+    steps:
+      - name: Fail if any job failed
+        if: needs.php-tests.result != 'success' && needs.php-tests.result != 'skipped'
+        run: exit 1
