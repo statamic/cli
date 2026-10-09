@@ -514,7 +514,7 @@ class NewCommand extends Command
             $commands[] = "chmod 755 \"$this->absolutePath/please\"";
         }
 
-        $this->runCommands($commands, taskLabel: 'Installing Statamic');
+        $this->runCommands($commands, taskLabel: 'Installing Statamic', completedTaskLabel: 'Statamic installed');
 
         if (! $this->wasBaseInstallSuccessful()) {
             throw new RuntimeException('There was a problem installing Statamic!');
@@ -842,7 +842,7 @@ class NewCommand extends Command
             "git branch -M {$branch}",
         ];
 
-        $this->runCommands($commands, workingPath: $this->absolutePath, taskLabel: 'Initializing Git repository');
+        $this->runCommands($commands, workingPath: $this->absolutePath, taskLabel: 'Initializing Git repository', completedTaskLabel: 'Git repository initialized');
 
         return $this;
     }
