@@ -3,7 +3,6 @@
 namespace Statamic\Cli\Concerns;
 
 use Laravel\Prompts\Support\Logger;
-use Laravel\Prompts\Task;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 
@@ -38,6 +37,10 @@ trait RunsCommands
                     return $value;
                 }
 
+                if (str_starts_with($value, 'rm ') || str_starts_with($value, 'rd ')) {
+                    return $value;
+                }
+
                 return $value.' --no-ansi';
             }, $commands);
         }
@@ -49,6 +52,10 @@ trait RunsCommands
                 }
 
                 if (str_starts_with($value, 'git')) {
+                    return $value;
+                }
+
+                if (str_starts_with($value, 'rm ') || str_starts_with($value, 'rd ')) {
                     return $value;
                 }
 
@@ -92,7 +99,6 @@ trait RunsCommands
     {
         return $this->output->getVerbosity() === OutputInterface::VERBOSITY_NORMAL
             && $this->output->isDecorated()
-            && property_exists(Task::class, 'keepSummary')
             && function_exists('pcntl_fork');
     }
 

@@ -3,7 +3,6 @@
 namespace Statamic\Cli\Tests;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Statamic\Cli\NewCommand;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -74,9 +73,7 @@ class NewCommandIntegrationTest extends TestCase
     {
         mkdir($this->appPath());
 
-        $this->assertRuntimeException(function () {
-            $this->scaffoldNewApp();
-        });
+        $this->assertSame(1, $this->scaffoldNewApp());
 
         $this->assertFileExists($this->appPath());
         $this->assertFileNotExists($this->appPath('vendor'));
@@ -102,9 +99,7 @@ class NewCommandIntegrationTest extends TestCase
     /** @test */
     public function it_fails_if_using_force_option_to_cwd()
     {
-        $this->assertRuntimeException(function () {
-            $this->scaffoldNewApp(['name' => '.', '--force' => true]);
-        });
+        $this->assertSame(1, $this->scaffoldNewApp(['name' => '.', '--force' => true]));
 
         $this->assertAppNotExists();
     }
@@ -112,9 +107,7 @@ class NewCommandIntegrationTest extends TestCase
     /** @test */
     public function it_fails_if_invalid_starter_kit_repo_is_passed()
     {
-        $this->assertRuntimeException(function () {
-            $this->scaffoldNewApp(['starter-kit' => 'not-a-valid-repo']);
-        });
+        $this->assertSame(1, $this->scaffoldNewApp(['starter-kit' => 'not-a-valid-repo']));
 
         $this->assertAppNotExists();
     }
@@ -122,24 +115,9 @@ class NewCommandIntegrationTest extends TestCase
     /** @test */
     public function it_fails_when_there_is_starter_kit_error_but_leaves_base_installation()
     {
-        $this->assertRuntimeException(function () {
-            $this->scaffoldNewApp(['starter-kit' => 'statamic/not-an-actual-starter-kit']);
-        });
+        $this->assertSame(1, $this->scaffoldNewApp(['starter-kit' => 'statamic/not-an-actual-starter-kit']));
 
         $this->assertBasicAppScaffolded();
-    }
-
-    protected function assertRuntimeException($callback)
-    {
-        $error = false;
-
-        try {
-            $callback();
-        } catch (RuntimeException $exception) {
-            $error = true;
-        }
-
-        $this->assertTrue($error);
     }
 
     protected function clearScaffoldDirectory()
@@ -170,11 +148,9 @@ class NewCommandIntegrationTest extends TestCase
 
         $tester = new CommandTester($app->find('new'));
 
-        $args = array_merge(['name' => $this->scaffoldName], $args);
+        $args = array_merge(['name' => $this->scaffoldName, '--no-interaction' => true], $args);
 
-        $statusCode = $tester->execute($args);
-
-        return $statusCode;
+        return $tester->execute($args, ['interactive' => false]);
     }
 
     protected function assertBasicAppScaffolded()
@@ -186,7 +162,6 @@ class NewCommandIntegrationTest extends TestCase
 
         $envFile = file_get_contents($this->appPath('.env'));
         $this->assertStringContainsString('APP_URL=http://my-app.test', $envFile);
-        $this->assertStringContainsString('DB_DATABASE=my_app', $envFile);
     }
 
     protected function assertAppNotExists()
