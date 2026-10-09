@@ -1080,6 +1080,8 @@ class NewCommand extends Command
             ? 'Open: '.new Link($this->generateAppUrl($this->name))
             : 'composer run dev';
 
+        $this->output->write(PHP_EOL);
+
         callout('Statamic was installed successfully!', [
             'You can start your local development using:',
             new NumberedList($steps),
