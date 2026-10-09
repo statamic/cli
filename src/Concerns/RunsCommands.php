@@ -101,19 +101,26 @@ trait RunsCommands
      */
     private function runProcessAsTask(Process $process, string $taskLabel): Process
     {
+        $output = '';
+
         task(
             label: $taskLabel,
             keepSummary: true,
-            callback: function (Logger $logger) use ($process) {
-                $process->run(function ($type, $line) use ($logger) {
+            callback: function (Logger $logger) use ($process, &$output) {
+                $process->run(function ($type, $line) use ($logger, &$output) {
+                    $output .= $line;
                     $logger->line($line);
                 });
 
                 if (! $process->isSuccessful()) {
-                    $logger->error(trim($process->getErrorOutput()));
+                    $logger->error("Failed with exit code {$process->getExitCode()}");
                 }
             },
         );
+
+        if (! $process->isSuccessful()) {
+            $this->output->write(PHP_EOL.preg_replace('/^/m', '    ', $output));
+        }
 
         return $process;
     }
