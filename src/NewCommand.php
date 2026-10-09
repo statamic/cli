@@ -4,6 +4,9 @@ namespace Statamic\Cli;
 
 use GuzzleHttp\Client;
 use Laravel\Prompts\ConfirmPrompt;
+use Laravel\Prompts\Elements\Heading;
+use Laravel\Prompts\Elements\Link;
+use Laravel\Prompts\Elements\NumberedList;
 use Laravel\Prompts\Prompt;
 use Laravel\Prompts\SelectPrompt;
 use Laravel\Prompts\SuggestPrompt;
@@ -22,6 +25,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 
+use function Laravel\Prompts\callout;
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\intro;
 use function Laravel\Prompts\select;
@@ -30,7 +34,7 @@ use function Laravel\Prompts\text;
 
 class NewCommand extends Command
 {
-    use Concerns\ConfiguresDatabase, Concerns\ConfiguresPrompts, Concerns\RunsCommands;
+    use Concerns\ConfiguresDatabase, Concerns\ConfiguresPrompts, Concerns\InteractsWithHerdOrValet, Concerns\RunsCommands;
 
     const BASE_REPO = 'statamic/statamic';
     const OUTPOST_ENDPOINT = 'https://outpost.statamic.com/v3/starter-kits/';
@@ -1047,11 +1051,19 @@ class NewCommand extends Command
      */
     protected function showSuccessMessage()
     {
-        $this->output->writeln(PHP_EOL.'  <info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
-        $this->output->writeln('  You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
-        $this->output->writeln('  The documentation is always available at <info>statamic.dev</info> and you can ');
-        $this->output->writeLn('  join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
-        $this->output->writeLn('  Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
+        $steps = ['cd '.$this->relativePath];
+
+        $steps[] = $this->isParkedOnHerdOrValet($this->absolutePath)
+            ? 'Open: '.new Link($this->generateAppUrl($this->name))
+            : 'composer run dev';
+
+        callout('Statamic was installed successfully!', [
+            'You can start your local development using:',
+            new NumberedList($steps),
+            "\e[1mNew to Statamic?\e[22m Check out our ".new Link('https://statamic.dev', 'documentation').'.'.PHP_EOL.
+            "\e[1mNeed help?\e[22m Join the community on ".new Link('https://statamic.com/discord', 'Discord').'.',
+            new Heading('Now go — it\'s time to create something wonderful! 🌟'),
+        ]);
 
         return $this;
     }
