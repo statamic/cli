@@ -514,7 +514,7 @@ class NewCommand extends Command
             $commands[] = "chmod 755 \"$this->absolutePath/please\"";
         }
 
-        $this->runCommands($commands, taskLabel: 'Installing Statamic');
+        $this->runCommands($commands, taskLabel: 'Installing Statamic', completedTaskLabel: 'Statamic installed');
 
         if (! $this->wasBaseInstallSuccessful()) {
             throw new RuntimeException('There was a problem installing Statamic!');
@@ -842,7 +842,7 @@ class NewCommand extends Command
             "git branch -M {$branch}",
         ];
 
-        $this->runCommands($commands, workingPath: $this->absolutePath, taskLabel: 'Initializing Git repository');
+        $this->runCommands($commands, workingPath: $this->absolutePath, taskLabel: 'Initializing Git repository', completedTaskLabel: 'Git repository initialized');
 
         return $this;
     }
@@ -1041,11 +1041,13 @@ class NewCommand extends Command
 
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run('pro:enable', '--no-interaction');
+            ->run('pro:enable', '--no-interaction', '--quiet');
 
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem enabling Statamic Pro!');
         }
+
+        $this->output->writeln(' <fg=green>✔</> Pro enabled');
 
         if ($this->statamicLicenseKey) {
             $this->writeStatamicLicenseKeyToEnv();

@@ -15,9 +15,9 @@ trait RunsCommands
      *
      * @return Process
      */
-    protected function runCommand(string $command, ?string $workingPath = null, bool $disableOutput = false, ?string $taskLabel = null)
+    protected function runCommand(string $command, ?string $workingPath = null, bool $disableOutput = false, ?string $taskLabel = null, ?string $completedTaskLabel = null)
     {
-        return $this->runCommands([$command], $workingPath, $disableOutput, $taskLabel);
+        return $this->runCommands([$command], $workingPath, $disableOutput, $taskLabel, $completedTaskLabel);
     }
 
     /**
@@ -25,7 +25,7 @@ trait RunsCommands
      *
      * @return Process
      */
-    protected function runCommands(array $commands, ?string $workingPath = null, bool $disableOutput = false, ?string $taskLabel = null)
+    protected function runCommands(array $commands, ?string $workingPath = null, bool $disableOutput = false, ?string $taskLabel = null, ?string $completedTaskLabel = null)
     {
         if (! $this->output->isDecorated()) {
             $commands = array_map(function ($value) {
@@ -66,7 +66,7 @@ trait RunsCommands
         $process = Process::fromShellCommandline(implode(' && ', $commands), $workingPath, timeout: null);
 
         if ($taskLabel && ! $disableOutput && $this->shouldRunAsTask()) {
-            return $this->runProcessAsTask($process, $taskLabel);
+            return $this->runProcessAsTask($process, $taskLabel, $completedTaskLabel);
         }
 
         if ('\\' !== DIRECTORY_SEPARATOR && file_exists('/dev/tty') && is_readable('/dev/tty')) {
@@ -105,14 +105,14 @@ trait RunsCommands
     /**
      * Run the given process within a Laravel Prompts task, streaming its output into the task's log.
      */
-    private function runProcessAsTask(Process $process, string $taskLabel): Process
+    private function runProcessAsTask(Process $process, string $taskLabel, ?string $completedTaskLabel = null): Process
     {
         $output = '';
 
         task(
             label: $taskLabel,
             keepSummary: true,
-            callback: function (Logger $logger) use ($process, &$output) {
+            callback: function (Logger $logger) use ($process, $completedTaskLabel, &$output) {
                 $process->run(function ($type, $line) use ($logger, &$output) {
                     $output .= $line;
                     $logger->line($line);
@@ -120,6 +120,8 @@ trait RunsCommands
 
                 if (! $process->isSuccessful()) {
                     $logger->error("Failed with exit code {$process->getExitCode()}");
+                } elseif ($completedTaskLabel) {
+                    $logger->label($completedTaskLabel);
                 }
             },
         );
