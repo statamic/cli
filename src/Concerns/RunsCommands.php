@@ -37,6 +37,10 @@ trait RunsCommands
                     return $value;
                 }
 
+                if (str_starts_with($value, 'rm ') || str_starts_with($value, 'rd ')) {
+                    return $value;
+                }
+
                 return $value.' --no-ansi';
             }, $commands);
         }
@@ -48,6 +52,10 @@ trait RunsCommands
                 }
 
                 if (str_starts_with($value, 'git')) {
+                    return $value;
+                }
+
+                if (str_starts_with($value, 'rm ') || str_starts_with($value, 'rd ')) {
                     return $value;
                 }
 
