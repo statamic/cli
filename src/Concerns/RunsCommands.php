@@ -3,6 +3,7 @@
 namespace Statamic\Cli\Concerns;
 
 use Laravel\Prompts\Support\Logger;
+use Laravel\Prompts\Task;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 
@@ -91,7 +92,7 @@ trait RunsCommands
     {
         return $this->output->getVerbosity() === OutputInterface::VERBOSITY_NORMAL
             && $this->output->isDecorated()
-            && function_exists('Laravel\Prompts\task')
+            && property_exists(Task::class, 'keepSummary')
             && function_exists('pcntl_fork');
     }
 
