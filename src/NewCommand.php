@@ -1041,11 +1041,13 @@ class NewCommand extends Command
 
         $statusCode = (new Please($this->output))
             ->cwd($this->absolutePath)
-            ->run('pro:enable', '--no-interaction');
+            ->run('pro:enable', '--no-interaction', '--quiet');
 
         if ($statusCode !== 0) {
             throw new RuntimeException('There was a problem enabling Statamic Pro!');
         }
+
+        $this->output->writeln(' <fg=green>✔</> Pro enabled');
 
         if ($this->statamicLicenseKey) {
             $this->writeStatamicLicenseKeyToEnv();
