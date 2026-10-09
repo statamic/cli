@@ -1060,8 +1060,10 @@ class NewCommand extends Command
         callout('Statamic was installed successfully!', [
             'You can start your local development using:',
             new NumberedList($steps),
-            "\e[1mNew to Statamic?\e[22m Check out our ".new Link('https://statamic.dev', 'documentation').'.'.PHP_EOL.
-            "\e[1mNeed help?\e[22m Join the community on ".new Link('https://statamic.com/discord', 'Discord').'.',
+            $this->output->getFormatter()->format('<options=bold>New to Statamic?</>')
+                .' Check out our '.new Link('https://statamic.dev', 'documentation').'.'.PHP_EOL
+                .$this->output->getFormatter()->format('<options=bold>Need help?</>')
+                .' Join the community on '.new Link('https://statamic.com/discord', 'Discord').'.',
             new Heading('Now go — it\'s time to create something wonderful! 🌟'),
         ]);
 
