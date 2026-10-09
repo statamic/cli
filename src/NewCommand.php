@@ -1051,16 +1051,6 @@ class NewCommand extends Command
      */
     protected function showSuccessMessage()
     {
-        if (! function_exists('Laravel\Prompts\callout')) {
-            $this->output->writeln(PHP_EOL.'  <info>[✔] Statamic was installed successfully!</info>'.PHP_EOL);
-            $this->output->writeln('  You may now enter your project directory using <comment>cd '.$this->relativePath.'</comment>,'.PHP_EOL);
-            $this->output->writeln('  The documentation is always available at <info>statamic.dev</info> and you can ');
-            $this->output->writeln('  join the community on Discord at <info>statamic.com/discord</info> anytime.'.PHP_EOL);
-            $this->output->writeln('  Now go — it\'s time to create something wonderful! 🌟'.PHP_EOL);
-
-            return $this;
-        }
-
         $steps = ['cd '.$this->relativePath];
 
         $steps[] = $this->isParkedOnHerdOrValet($this->absolutePath)
