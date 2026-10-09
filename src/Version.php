@@ -2,22 +2,21 @@
 
 namespace Statamic\Cli;
 
+use Composer\InstalledVersions;
+
 class Version
 {
     public static function get()
     {
-        $contents = @file_get_contents(__DIR__.'/../../../../composer.lock');
-
-        if (! $contents) {
-            return 'UNKNOWN';
+        try {
+            return InstalledVersions::getPrettyVersion('statamic/cli');
+        } catch (\OutOfBoundsException $e) {
+            return null;
         }
+    }
 
-        $lock = json_decode($contents, true);
-
-        $packages = $lock['packages'];
-
-        $i = array_search('statamic/cli', array_column($packages, 'name'));
-
-        return $packages[$i]['version'];
+    public static function isDev($version)
+    {
+        return str_starts_with($version, 'dev-') || str_ends_with($version, '-dev');
     }
 }

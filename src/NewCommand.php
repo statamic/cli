@@ -209,7 +209,9 @@ class NewCommand extends Command
     {
         $request = new Client;
 
-        if (! $currentVersion = Version::get()) {
+        $currentVersion = Version::get();
+
+        if (! $currentVersion || Version::isDev($currentVersion)) {
             return $this;
         }
 
