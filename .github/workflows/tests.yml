@@ -14,9 +14,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      php: ${{ steps.changed-files.outputs.any_modified }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: |
+            bin/**
+            src/**
+            tests/**
+            composer.json
+            phpunit.xml.dist
+            .github/workflows/tests.yml
+            **.php
+
   php-tests:
     name: PHP ${{ matrix.php }} - ${{ matrix.stability }}
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.php == 'true'
     permissions:
       contents: read
 
@@ -50,11 +79,11 @@ jobs:
   php-tests-result:
     name: PHP tests
     runs-on: ubuntu-latest
-    needs: [php-tests]
+    needs: [changes, php-tests]
     if: always()
     permissions: {}
 
     steps:
       - name: Fail if any job failed
-        if: needs.php-tests.result != 'success' && needs.php-tests.result != 'skipped'
+        if: needs.changes.result != 'success' || (needs.php-tests.result != 'success' && needs.php-tests.result != 'skipped')
         run: exit 1
