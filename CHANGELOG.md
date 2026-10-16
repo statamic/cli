@@ -1,5 +1,21 @@
 # Release Notes
 
+## 3.7.0 (2026-10-12)
+
+### What's new
+- Prompt for Statamic license key before installing [#117](https://github.com/statamic/cli/issues/117) by @jasonvarga
+- Add option to remember stars [#119](https://github.com/statamic/cli/issues/119) by @jasonvarga
+- Bump minimum PHP and dependency versions [#115](https://github.com/statamic/cli/issues/115) by @jasonvarga
+
+### What's fixed
+- Collapse install output with `task()` [#110](https://github.com/statamic/cli/issues/110) by @duncanmcclean
+- Show success message in a callout box [#114](https://github.com/statamic/cli/issues/114) by @jasonvarga
+- Tidy up install step output [#118](https://github.com/statamic/cli/issues/118) by @jasonvarga
+- Recommend cpx for installing the CLI tool [#111](https://github.com/statamic/cli/issues/111) by @duncanmcclean
+- Fix old version warning when running from a local checkout [#113](https://github.com/statamic/cli/issues/113) by @jasonvarga
+
+
+
 ## 3.6.4 (2026-07-29)
 
 ### What's new
